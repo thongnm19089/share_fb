@@ -1,0 +1,74 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="card p-4">
+            <h3 class="mb-4">Create New Campaign</h3>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Campaign Name</label>
+                            <input type="text" name="name" class="form-control" required
+                                placeholder="Ex: Khuyến mãi Tết">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Link to Share</label>
+                            <input type="url" name="link_to_share" class="form-control" required
+                                placeholder="https://..." value="{{ initial_link }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Comment Content (Optional)</label>
+                            <textarea name="comment_content" class="form-control" rows="4"
+                                placeholder="Ví dụ: Sản phẩm này đang giảm giá cực sốc!"></textarea>
+                            <small class="text-muted">This comment will be posted on the shared post
+                                automatically.</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 border-start pl-4">
+                        <div class="mb-3">
+                            <label class="form-label">Select Accounts to Share From</label>
+                            <div class="border rounded p-2 bg-light" style="max-height: 150px; overflow-y: auto;">
+                                {% for account in accounts %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="accounts"
+                                        value="{{ account.id }}" id="acc_{{ account.id }}">
+                                    <label class="form-check-label" for="acc_{{ account.id }}">
+                                        {{ account.name }}
+                                    </label>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted small">No live accounts available.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Target Groups</label>
+                            <div class="border rounded p-2 bg-light" style="max-height: 150px; overflow-y: auto;">
+                                {% for group in groups %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="groups" value="{{ group.id }}"
+                                        id="grp_{{ group.id }}">
+                                    <label class="form-check-label" for="grp_{{ group.id }}">
+                                        {{ group.name }} ({{ group.group_id }})
+                                    </label>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted small">No groups available.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <div class="text-end">
+                    <a href="{% url 'campaign_list' %}" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Campaign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

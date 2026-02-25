@@ -1,0 +1,28 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card p-4">
+            <h3 class="mb-4">Add Target Group</h3>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Group Name</label>
+                    <input type="text" name="name" class="form-control" required placeholder="Ex: Cầu Lông Hà Nội">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Group ID</label>
+                    <input type="text" name="group_id" class="form-control" required placeholder="Ex: 123456789">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Group URL</label>
+                    <input type="url" name="url" class="form-control" required
+                        placeholder="https://www.facebook.com/groups/...">
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Group</button>
+                <a href="{% url 'group_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

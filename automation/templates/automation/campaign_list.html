@@ -1,0 +1,48 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <h3>Share Campaigns</h3>
+    <a href="{% url 'add_campaign' %}" class="btn btn-primary"><i class="fas fa-plus"></i> New Campaign</a>
+</div>
+
+<div class="row">
+    {% for campaign in campaigns %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold truncate"><i class="fas fa-share-alt text-primary me-2"></i> {{ campaign.name
+                    }}</span>
+                <small class="text-muted">{{ campaign.created_at|date:"d/m/Y" }}</small>
+            </div>
+            <div class="card-body">
+                <p><strong>Link:</strong> <a href="{{ campaign.link_to_share }}" target="_blank"
+                        class="text-truncate d-inline-block" style="max-width: 250px; vertical-align: bottom;">{{
+                        campaign.link_to_share }}</a></p>
+                <p><strong>Comment:</strong> <span class="text-muted fst-italic">{{
+                        campaign.comment_content|truncatechars:50|default:"No comment" }}</span></p>
+                <div class="d-flex gap-3 mb-3">
+                    <span class="badge bg-secondary"><i class="fas fa-users-cog"></i> {{ campaign.accounts.count }}
+                        Accounts</span>
+                    <span class="badge bg-secondary"><i class="fas fa-users"></i> {{ campaign.groups.count }}
+                        Groups</span>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-top-0 pb-3 text-end">
+                <form action="{% url 'run_campaign' campaign.id %}" method="POST" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success"
+                        onclick="return confirm('Bạn có chắc muốn chạy chiến dịch này ngay bây giờ?');">
+                        <i class="fas fa-play"></i> Run Campaign
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5 text-muted">
+        <h4>No campaigns found</h4>
+        <p>Create your first campaign to start auto-sharing!</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

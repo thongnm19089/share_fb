@@ -1,0 +1,54 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <h3>Mục Tiêu Theo Dõi (Observed Pages)</h3>
+    <a href="{% url 'add_page' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Page</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th>Page Name</th>
+                    <th>URL</th>
+                    <th>Trạng Thái</th>
+                    <th>Last Scraped</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for page in pages %}
+                <tr>
+                    <td>{{ page.name }}</td>
+                    <td><a href="{{ page.url }}" target="_blank" class="text-decoration-none">{{
+                            page.url|truncatechars:40 }}</a></td>
+                    <td>
+                        {% if page.scrape_status == 'running' %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-spinner fa-spin"></i> Running</span>
+                        {% elif page.scrape_status == 'completed' %}
+                        <span class="badge bg-success">Completed</span>
+                        {% elif page.scrape_status == 'error' %}
+                        <span class="badge bg-danger">Error</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Idle</span>
+                        {% endif %}
+                    </td>
+                    <td><small class="text-muted">{{ page.last_scraped_at|date:"d/m/Y H:i"|default:"-" }}</small></td>
+                    <td>
+                        <a href="{% url 'scrape_page' page.id %}" class="btn btn-sm btn-outline-success"
+                            onclick="return confirm('Tiến hành quét bài viết mới nhất từ Page này bằng tài khoản FB Live?');">
+                            <i class="fas fa-search"></i> Quét Bài (Scrape)
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center py-4 text-muted">Chưa có page nào. Vui lòng thêm page.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

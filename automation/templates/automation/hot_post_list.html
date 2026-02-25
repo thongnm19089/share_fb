@@ -1,0 +1,149 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <h3>Bài Viết Nổi Bật (Real-time)</h3>
+    <div>
+        <button id="btn-scrape-all" class="btn btn-success me-2"><i class="fas fa-robot"></i> Quét Tất Cả Pages</button>
+        <a href="{% url 'page_list' %}" class="btn btn-outline-primary"><i class="fas fa-cog"></i> Quản lý Pages</a>
+    </div>
+</div>
+
+<div id="scrape-progress-wrapper" class="d-none mb-4">
+    <h5>Đang quét dữ liệu... <span id="scrape-percent">0</span>%</h5>
+    <div class="progress" style="height: 25px;">
+        <div id="scrape-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+            role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+</div>
+
+<div id="posts-container" class="row">
+    <div class="col-12 text-center py-5 text-muted" id="empty-state">
+        <h4>Chưa có dữ liệu phiên quét hiện tại</h4>
+        <p>Hãy nhấn "Quét Tất Cả Pages" để bắt đầu cào dữ liệu trực tiếp mới nhất!</p>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const btnScrapeAll = document.getElementById('btn-scrape-all');
+        const progressWrapper = document.getElementById('scrape-progress-wrapper');
+        const progressBar = document.getElementById('scrape-progress-bar');
+        const progressPercent = document.getElementById('scrape-percent');
+        const postsContainer = document.getElementById('posts-container');
+        const emptyState = document.getElementById('empty-state');
+
+        let pollInterval;
+
+        btnScrapeAll.addEventListener('click', function () {
+            if (!confirm('Bắt đầu quét TẤT CẢ các Pages? Dữ liệu sẽ không được lưu vào Database mà sẽ hiển thị trực tiếp.')) return;
+
+            btnScrapeAll.disabled = true;
+            postsContainer.innerHTML = '';
+            progressWrapper.classList.remove('d-none');
+            updateProgress(0);
+
+            fetch("{% url 'api_start_scrape' %}")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'error') {
+                        alert(data.message);
+                        resetUI();
+                        return;
+                    }
+
+                    const jobId = data.job_id;
+                    // Start polling every 2 seconds
+                    pollInterval = setInterval(() => checkStatus(jobId), 2000);
+                })
+                .catch(err => {
+                    alert("Lỗi khi gọi API: " + err);
+                    resetUI();
+                });
+        });
+
+        function checkStatus(jobId) {
+            fetch(`/api/scrape/status/${jobId}/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'error') {
+                        alert("Lỗi trong quá trình quét: " + data.error);
+                        clearInterval(pollInterval);
+                        resetUI();
+                        return;
+                    }
+
+                    updateProgress(data.progress);
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        setTimeout(() => {
+                            progressWrapper.classList.add('d-none');
+                            renderPosts(data.results);
+                            btnScrapeAll.disabled = false;
+                        }, 500);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        function updateProgress(pct) {
+            progressBar.style.width = pct + '%';
+            progressBar.setAttribute('aria-valuenow', pct);
+            progressPercent.textContent = pct;
+        }
+
+        function resetUI() {
+            btnScrapeAll.disabled = false;
+            progressWrapper.classList.add('d-none');
+        }
+
+        function renderPosts(results) {
+            if (!results || results.length === 0) {
+                postsContainer.innerHTML = `
+                <div class="col-12 text-center py-5 text-muted">
+                    <h4>Không tìm thấy bài viết nào</h4>
+                </div>`;
+                return;
+            }
+
+            let html = '';
+            results.forEach(post => {
+                const dateStr = new Date(post.posted_at).toLocaleString();
+                const borderClass = post.total_engagement > 100 ? 'success' : 'secondary';
+                const defaultSnippet = "[Không có nội dung text]";
+
+                html += `
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm border-${borderClass}">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-primary"><i class="fas fa-flag"></i> ${post.page_name || 'Page'}</span>
+                        <small class="text-muted" title="${dateStr}">~ ${dateStr}</small>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text text-truncate-multiline"
+                            style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                            ${post.content_snippet || defaultSnippet}
+                        </p>
+                        <hr>
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span title="Likes"><i class="fas fa-thumbs-up text-primary"></i> ${post.likes || 0}</span>
+                            <span title="Comments"><i class="fas fa-comment text-warning"></i> ${post.comments || 0}</span>
+                            <span title="Shares"><i class="fas fa-share text-success"></i> ${post.shares || 0}</span>
+                            <strong title="Total Engagement" class="text-danger"><i class="fas fa-fire"></i> ${post.total_engagement || 0}</strong>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light p-2 text-center">
+                        <a href="${post.post_url}" target="_blank" class="btn btn-sm btn-outline-secondary"><i
+                                class="fas fa-external-link-alt"></i> Xem bài</a>
+                        <a href="{% url 'add_campaign' %}?link=${encodeURIComponent(post.post_url)}" class="btn btn-sm btn-primary"><i
+                                class="fas fa-share-alt"></i> Share Bài Này</a>
+                    </div>
+                </div>
+            </div>`;
+            });
+
+            postsContainer.innerHTML = html;
+        }
+    });
+</script>
+{% endblock %}

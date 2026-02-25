@@ -1,0 +1,84 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-4">Tool Overview</h2>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-3 mb-3 bg-primary text-white">
+                    <h5><i class="fas fa-user-circle"></i> Accounts</h5>
+                    <h3>{{ accounts|length }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 mb-3 bg-success text-white">
+                    <h5><i class="fas fa-users"></i> Groups</h5>
+                    <h3>{{ groups|length }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 mb-3 bg-info text-white">
+                    <h5><i class="fas fa-paper-plane"></i> Campaigns</h5>
+                    <h3>{{ campaigns|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                Recent Share Logs
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Campaign</th>
+                            <th>Account</th>
+                            <th>Group</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_logs %}
+                        <tr>
+                            <td>{{ log.campaign.name }}</td>
+                            <td>{{ log.account.name|default:"-" }}</td>
+                            <td>{{ log.group.name|default:"-" }}</td>
+                            <td>
+                                {% if log.status == 'success' %}
+                                <span class="badge bg-success">Success</span>
+                                {% elif log.status == 'failed' %}
+                                <span class="badge bg-danger" title="{{ log.error_message }}">Failed</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if log.shared_post_url %}
+                                <a href="{{ log.shared_post_url }}" target="_blank"
+                                    class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt"></i>
+                                    View</a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No logs yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

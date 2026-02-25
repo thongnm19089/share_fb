@@ -1,0 +1,26 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card p-4">
+            <h3 class="mb-4">Add Facebook Account</h3>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Account Name (or ID)</label>
+                    <input type="text" name="name" class="form-control" required placeholder="Ex: Nguyen Van A">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cookies (JSON String)</label>
+                    <textarea name="cookies" class="form-control" rows="8" required
+                        placeholder='[{"name": "c_user", "value": "123..."}, ...]'></textarea>
+                    <small class="text-muted">Extract your facebook cookies using an extension like EditThisCookie and
+                        paste the JSON here.</small>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Account</button>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
