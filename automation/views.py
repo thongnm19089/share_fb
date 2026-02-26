@@ -169,6 +169,7 @@ def run_scrape_job_thread(job_id, page_ids, account_cookies):
                 
                 for p in results:
                     p['page_name'] = page.name # attach page info for the frontend
+                    p['content_snippet'] = p.get('caption', '') # pass caption to frontend
                     # Convert datetime to ISO string for JSON serialization
                     if p.get('posted_at'):
                         p['posted_at'] = p['posted_at'].isoformat()
