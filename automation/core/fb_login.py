@@ -29,13 +29,13 @@ class FBAutoLogin:
         Logs into Facebook using uid, password, and 2fa secret.
         Returns (success: bool, cookies_json_str_or_error_msg: str)
         """
+        import os
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=self.headless,
+            user_data_dir = os.path.join(os.getcwd(), 'fb_browser_profile')
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
+                headless=False,
                 args=['--disable-notifications', '--no-sandbox', '--disable-dev-shm-usage'],
-            )
-            # Use a realistic user agent
-            context = browser.new_context(
                 user_agent=(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                     'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -45,7 +45,7 @@ class FBAutoLogin:
                 locale='vi-VN',
             )
             
-            page = context.new_page()
+            page = context.pages[0] if context.pages else context.new_page()
             try:
                 logger.info(f"Navigating to Facebook login for UID: {uid}")
                 page.goto('https://www.facebook.com/login', wait_until='domcontentloaded', timeout=30_000)
@@ -122,4 +122,3 @@ class FBAutoLogin:
                 return False, f"Error: {e}"
             finally:
                 context.close()
-                browser.close()

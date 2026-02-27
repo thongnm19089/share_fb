@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 import re
 from datetime import timedelta
@@ -473,11 +474,19 @@ class HotPostScraper:
         results = []
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=self.headless,
-                args=['--disable-notifications', '--no-sandbox', '--disable-dev-shm-usage'],
-            )
-            context = browser.new_context(
+            # Sửa đổi: Sử dụng Chrome của máy và thư mục Profile cố định để tránh bị Facebook chặn (Không dùng ẩn danh)
+            user_data_dir = os.path.join(os.getcwd(), 'fb_browser_profile')
+            
+            # Khởi chạy một trình duyệt cố định thay vì incognito
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
+                headless=False,  # Bỏ chế độ chạy ẩn (headless) theo yêu cầu User
+                args=[
+                    '--disable-notifications', 
+                    '--no-sandbox', 
+                    '--disable-dev-shm-usage',
+                    '--disable-blink-features=AutomationControlled' # Chống detect bot
+                ],
                 user_agent=(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                     'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -486,8 +495,10 @@ class HotPostScraper:
                 viewport={'width': 1366, 'height': 900},
                 locale='vi-VN',
             )
+
+            # Vẫn nạp cookies dự phòng nếu có (tuỳ chọn vì profile đã lưu session)
             self._load_cookies(context, account_cookies)
-            page = context.new_page()
+            page = context.pages[0] if context.pages else context.new_page()
 
             try:
                 logger.info(f"Navigating to {page_url}")
@@ -578,4 +589,3 @@ class HotPostScraper:
                 return results
             finally:
                 context.close()
-                browser.close()
