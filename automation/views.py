@@ -28,6 +28,26 @@ def add_account(request):
         return redirect('dashboard')
     return render(request, 'automation/add_account.html')
 
+def auto_login(request):
+    if request.method == 'POST':
+        uid = request.POST.get('uid')
+        password = request.POST.get('password')
+        two_fa = request.POST.get('two_fa')
+        
+        from .core.fb_login import FBAutoLogin
+        auto_logger = FBAutoLogin(headless=True)
+        success, result = auto_logger.login_and_get_cookies(uid, password, two_fa)
+        
+        if success:
+            FacebookAccount.objects.create(name=f"{uid} (Auto)", cookies=result, status='live')
+            messages.success(request, 'Đăng nhập tự động thành công và đã lưu Cookies!')
+            return redirect('dashboard')
+        else:
+            messages.error(request, f'Lỗi đăng nhập: {result}')
+            return redirect('auto_login')
+
+    return render(request, 'automation/auto_login.html')
+
 def group_list(request):
     groups = FacebookGroup.objects.all()
     return render(request, 'automation/group_list.html', {'groups': groups})

@@ -1,0 +1,39 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card p-4">
+            <h3 class="mb-4">Auto Login Facebook Account</h3>
+            <p class="text-muted mb-4">Nhập thông tin UID, Mật khẩu và mã bảo mật 2FA (dạng chuỗi bí mật, ví dụ:
+                <code>JBSWY3DPEHPK3PXP</code>) để hệ thống tự động đăng nhập và lấy Cookies.</p>
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Facebook UID (hoặc Email/Phone)</label>
+                    <input type="text" name="uid" class="form-control" required placeholder="Ex: 1000123456789">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mật khẩu</label>
+                    <input type="password" name="password" class="form-control" required
+                        placeholder="Nhập mật khẩu Facebook">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mã 2FA (Secret Key)</label>
+                    <input type="text" name="two_fa" class="form-control" required placeholder="Chuỗi sinh mã 2FA">
+                </div>
+
+                <div class="alert alert-info border-info mb-4 text-sm mt-3" role="alert">
+                    <i class="fas fa-info-circle me-1"></i> Quá trình đăng nhập có thể mất khoảng <strong>15 - 30
+                        giây</strong>. Vui lòng chờ cho đến khi trang được chuyển đổi hoàn tất.
+                </div>
+
+                <button type="submit" class="btn btn-primary"
+                    onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm\' role=\'status\' aria-hidden=\'true\'></span> Đang xử lý...';"><i
+                        class="fas fa-sign-in-alt"></i> Tự động Đăng nhập</button>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">Hủy bỏ</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
