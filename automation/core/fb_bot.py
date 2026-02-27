@@ -19,6 +19,8 @@ class FacebookBot:
             for cookie in cookies:
                 if 'domain' not in cookie:
                     cookie['domain'] = '.facebook.com'
+                if 'sameSite' in cookie and cookie['sameSite'] not in ['Strict', 'Lax', 'None']:
+                    del cookie['sameSite']
             context.add_cookies(cookies)
         except json.JSONDecodeError:
             logger.error("Invalid JSON cookie format")

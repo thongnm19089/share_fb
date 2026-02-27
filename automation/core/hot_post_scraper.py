@@ -31,6 +31,8 @@ class HotPostScraper:
                 if isinstance(c, dict) and 'name' in c and 'value' in c:
                     c.setdefault('domain', '.facebook.com')
                     c.setdefault('path', '/')
+                    if 'sameSite' in c and c['sameSite'] not in ['Strict', 'Lax', 'None']:
+                        del c['sameSite']
                     valid.append(c)
             if valid:
                 context.add_cookies(valid)
