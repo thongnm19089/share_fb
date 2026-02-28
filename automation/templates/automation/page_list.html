@@ -30,8 +30,7 @@
                         {% if page.is_auto_scan %}
                         <span class="badge bg-success">
                             <i class="fas fa-clock"></i>
-                            {% if page.auto_scan_time %}{{ page.auto_scan_time|time:"H:i" }}{% else %}00:00 & 12:00{%
-                            endif %}
+                            {% if page.auto_scan_time %}{{ page.auto_scan_time|time:"H:i" }}{% else %}00:00 & 12:00{% endif %}
                         </span>
                         {% else %}
                         <span class="badge bg-secondary"><i class="fas fa-times"></i> Tắt</span>
