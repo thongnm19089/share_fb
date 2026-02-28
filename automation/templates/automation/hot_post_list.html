@@ -242,7 +242,14 @@
                         hasMore = data.has_next;
                         if (hasMore) {
                             currentPage++;
-                            btnLoadMore.textContent = "Cuộn xuống để xem thêm...";
+                            btnLoadMore.textContent = "Tải thêm bài viết ▼";
+                            // Nếu màn hình lớn, scroll-detector đã trong viewport → auto load tiếp
+                            setTimeout(() => {
+                                const rect = document.getElementById('scroll-detector').getBoundingClientRect();
+                                if (rect.top < window.innerHeight && hasMore && !isLoading) {
+                                    loadHistoryPosts();
+                                }
+                            }, 150);
                         } else {
                             btnLoadMore.classList.add('d-none');
                         }
@@ -253,6 +260,11 @@
                     console.error("Lỗi tải lịch sử:", err);
                 });
         }
+
+        // Click button để load thêm (dành cho màn hình lớn)
+        btnLoadMore.addEventListener('click', () => {
+            if (!isLoading && hasMore) loadHistoryPosts();
+        });
 
         // Set up IntersectionObserver for Infinite Scrolling
         const observerOptions = {
