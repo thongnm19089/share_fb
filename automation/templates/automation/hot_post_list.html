@@ -1,7 +1,13 @@
 {% extends 'automation/base.html' %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h3>Bài Viết Nổi Bật (Real-time)</h3>
+<div class="d-flex justify-content-between mb-3 align-items-center">
+    <div class="d-flex align-items-center">
+        <h3 class="mb-0">Bài Viết Nổi Bật (Lịch sử)</h3>
+        <select id="sort-select" class="form-select form-select-sm ms-3" style="width: auto;">
+            <option value="engagement" selected>Tương tác Cao nhất</option>
+            <option value="time">Bài mới nhất</option>
+        </select>
+    </div>
     <div>
         <button id="btn-scrape-all" class="btn btn-success me-2"><i class="fas fa-robot"></i> Quét Tất Cả Pages</button>
         <a href="{% url 'page_list' %}" class="btn btn-outline-primary"><i class="fas fa-cog"></i> Quản lý Pages</a>
@@ -17,10 +23,10 @@
 </div>
 
 <div id="posts-container" class="row">
-    <div class="col-12 text-center py-5 text-muted" id="empty-state">
-        <h4>Chưa có dữ liệu phiên quét hiện tại</h4>
-        <p>Hãy nhấn "Quét Tất Cả Pages" để bắt đầu cào dữ liệu trực tiếp mới nhất!</p>
-    </div>
+</div>
+
+<div class="col-12 text-center py-4" id="scroll-detector">
+    <button id="btn-load-more" class="btn btn-outline-secondary d-none">Đang tải...</button>
 </div>
 
 <script>
@@ -35,10 +41,11 @@
         let pollInterval;
 
         btnScrapeAll.addEventListener('click', function () {
-            if (!confirm('Bắt đầu quét TẤT CẢ các Pages? Dữ liệu sẽ không được lưu vào Database mà sẽ hiển thị trực tiếp.')) return;
+            if (!confirm('Bắt đầu quét TẤT CẢ các Pages (có bật Tự động Quét)? Dữ liệu sẽ lưu vào DB.')) return;
 
             btnScrapeAll.disabled = true;
-            postsContainer.innerHTML = '';
+            // Optionally clear old data before running new scan to avoid duplicates being shown right away
+            // postsContainer.innerHTML = ''; 
             progressWrapper.classList.remove('d-none');
             updateProgress(0);
 
@@ -97,27 +104,83 @@
             progressWrapper.classList.add('d-none');
         }
 
-        function renderPosts(results) {
+        function formatRelativeTime(dateString) {
+            if (!dateString) return 'N/A';
+            const postDate = new Date(dateString);
+            const now = new Date();
+
+            const hours = postDate.getHours().toString().padStart(2, '0');
+            const minutes = postDate.getMinutes().toString().padStart(2, '0');
+            let timeStr = `${hours}:${minutes}`;
+
+            const isToday = postDate.getDate() === now.getDate() &&
+                postDate.getMonth() === now.getMonth() &&
+                postDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                const diffMs = now - postDate;
+                const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+
+                if (diffHrs > 0) {
+                    timeStr += ` (${diffHrs} giờ trước)`;
+                } else {
+                    const diffMins = Math.floor(diffMs / (1000 * 60));
+                    if (diffMins > 0) {
+                        timeStr += ` (${diffMins} phút trước)`;
+                    } else {
+                        timeStr += ` (Vừa xong)`;
+                    }
+                }
+            }
+            return timeStr;
+        }
+
+        let lastRenderedDate = null; // Dùng để theo dõi dải phân cách ngày
+
+        function appendPosts(results) {
             if (!results || results.length === 0) {
-                postsContainer.innerHTML = `
-                <div class="col-12 text-center py-5 text-muted">
-                    <h4>Không tìm thấy bài viết nào</h4>
-                </div>`;
+                if (postsContainer.innerHTML.trim() === '') {
+                    postsContainer.innerHTML = `
+                    <div class="col-12 text-center py-5 text-muted w-100">
+                        <h4>Không có bài viết nào trong Lịch sử</h4>
+                    </div>`;
+                }
                 return;
             }
 
             let html = '';
             results.forEach(post => {
-                const dateStr = new Date(post.posted_at).toLocaleString();
+                const timeStr = formatRelativeTime(post.posted_at);
+
+                // Grouping by Date logic
+                const currentDateGroup = post.post_date || 'Unknown Date';
+                if (currentDateGroup !== lastRenderedDate) {
+                    lastRenderedDate = currentDateGroup;
+                    let displayDate = currentDateGroup;
+                    if (currentDateGroup === new Date().toISOString().split('T')[0]) {
+                        displayDate = "Ngày Hôm Nay";
+                    }
+                    html += `
+                    <div class="col-12 mt-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            <hr class="flex-grow-1 border-primary opacity-25">
+                            <span class="badge bg-primary rounded-pill px-3 py-2 mx-3 fs-6"><i class="far fa-calendar-alt me-2"></i>${displayDate}</span>
+                            <hr class="flex-grow-1 border-primary opacity-25">
+                        </div>
+                    </div>`;
+                }
+
                 const borderClass = post.total_engagement > 100 ? 'success' : 'secondary';
                 const defaultSnippet = "[Không có nội dung text]";
 
                 html += `
-            <div class="col-md-4 mb-4">
+            <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
                 <div class="card h-100 shadow-sm border-${borderClass}">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-primary"><i class="fas fa-flag"></i> ${post.page_name || 'Page'}</span>
-                        <small class="text-muted" title="${dateStr}">~ ${dateStr}</small>
+                        <span class="fw-bold text-primary text-truncate flex-grow-1"><i class="fas fa-flag"></i> ${post.page_name || 'Page'}</span>
+                        <a href="${post.post_url}" target="_blank" class="text-decoration-none text-muted small ms-2 text-nowrap" title="Xem Bài">
+                            <i class="far fa-clock"></i> ${timeStr}
+                        </a>
                     </div>
                     <div class="card-body">
                         <p class="card-text text-truncate-multiline"
@@ -132,18 +195,78 @@
                             <strong title="Total Engagement" class="text-danger"><i class="fas fa-fire"></i> ${post.total_engagement || 0}</strong>
                         </div>
                     </div>
-                    <div class="card-footer bg-light p-2 text-center">
-                        <a href="${post.post_url}" target="_blank" class="btn btn-sm btn-outline-secondary"><i
-                                class="fas fa-external-link-alt"></i> Xem bài</a>
-                        <a href="{% url 'add_campaign' %}?link=${encodeURIComponent(post.post_url)}" class="btn btn-sm btn-primary"><i
-                                class="fas fa-share-alt"></i> Share Bài Này</a>
-                    </div>
                 </div>
             </div>`;
             });
 
-            postsContainer.innerHTML = html;
+            postsContainer.insertAdjacentHTML('beforeend', html);
         }
+
+        // Logic for infinite scrolling / load more historic posts
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMore = true;
+        const btnLoadMore = document.getElementById('btn-load-more');
+
+        let currentSort = 'engagement';
+        const sortSelect = document.getElementById('sort-select');
+
+        sortSelect.addEventListener('change', function () {
+            currentSort = this.value;
+            currentPage = 1;
+            hasMore = true;
+            lastRenderedDate = null;
+            postsContainer.innerHTML = ''; // Reset ui
+            loadHistoryPosts();
+        });
+
+        function loadHistoryPosts() {
+            if (isLoading || !hasMore) return;
+            isLoading = true;
+            btnLoadMore.classList.remove('d-none');
+            btnLoadMore.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang tải...';
+
+            fetch(`/api/posts/?page=${currentPage}&sort=${currentSort}`)
+                .then(res => res.json())
+                .then(data => {
+                    isLoading = false;
+                    if (data.status === 'ok') {
+                        appendPosts(data.results);
+                        hasMore = data.has_next;
+                        if (hasMore) {
+                            currentPage++;
+                            btnLoadMore.textContent = "Cuộn xuống để xem thêm...";
+                        } else {
+                            btnLoadMore.classList.add('d-none');
+                        }
+                    }
+                })
+                .catch(err => {
+                    isLoading = false;
+                    console.error("Lỗi tải lịch sử:", err);
+                });
+        }
+
+        // Set up IntersectionObserver for Infinite Scrolling
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && hasMore && !isLoading) {
+                    loadHistoryPosts();
+                }
+            });
+        }, observerOptions);
+
+        // Start observing the load more button anchor
+        observer.observe(document.getElementById('scroll-detector'));
+
+        // Load page 1 automatically on startup
+        loadHistoryPosts();
     });
 </script>
 {% endblock %}

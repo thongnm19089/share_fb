@@ -77,13 +77,14 @@ class HotPostScraper:
     # ──────────────────────────────────────────────────────────────────────────
     # Time parser  ("15 giờ" → datetime | "Vừa xong" → now | old → None)
     # ──────────────────────────────────────────────────────────────────────────
-    def _parse_time_string(self, raw):
+    def _parse_time_string(self, raw, max_days=5):
         """
-        Returns (datetime, within_24h: bool).
-        within_24h=True  → bài trong 24h trước
-        within_24h=False → bài cũ hơn hoặc không parse được
+        Returns (datetime, within_range: bool).
+        within_range=True  → bài trong khoảng max_days ngày trước
+        within_range=False → bài cũ hơn hoặc không parse được
         """
         now = timezone.now()
+        max_seconds = max_days * 86400
         s = (raw or '').lower().strip()
         if not s:
             return None, False
@@ -102,13 +103,19 @@ class HotPostScraper:
         if m:
             return now - timedelta(minutes=int(m.group(1))), True
 
-        # X giờ / X hrs / Xh (Facebook EN thường viết "15h" hoặc "15 hrs")
+        # X giờ / X hrs / Xh
         m = re.search(r'(\d+)\s*(giờ|gr|hrs?|h)\b', s)
         if m:
             hours = int(m.group(1))
-            if hours <= 24:
-                return now - timedelta(hours=hours), True
-            return None, False
+            dt = now - timedelta(hours=hours)
+            return dt, (now - dt).total_seconds() <= max_seconds
+
+        # X ngày / X days
+        m = re.search(r'(\d+)\s*(ngày|day)', s)
+        if m:
+            days = int(m.group(1))
+            dt = now - timedelta(days=days)
+            return dt, days <= max_days
 
         # Hôm qua / yesterday (có thể kèm giờ)
         if 'hôm qua' in s or 'yesterday' in s:
@@ -117,8 +124,7 @@ class HotPostScraper:
                 hr, mn = int(t.group(1)), int(t.group(2))
                 candidate = (now - timedelta(days=1)).replace(
                     hour=hr, minute=mn, second=0, microsecond=0)
-                if (now - candidate).total_seconds() <= 86400:
-                    return candidate, True
+                return candidate, True
             return now - timedelta(days=1), True
 
         # Giờ hôm nay "10:30"
@@ -128,7 +134,7 @@ class HotPostScraper:
             candidate = now.replace(hour=hr, minute=mn, second=0, microsecond=0)
             if candidate > now:
                 candidate -= timedelta(days=1)
-            if (now - candidate).total_seconds() <= 86400:
+            if (now - candidate).total_seconds() <= max_seconds:
                 return candidate, True
             return None, False
 
@@ -138,27 +144,25 @@ class HotPostScraper:
             from datetime import datetime
             import pytz
             dt = datetime.fromtimestamp(int(s), tz=pytz.UTC)
-            if (now - dt).total_seconds() <= 86400:
-                return dt, True
-            return dt, False
+            return dt, (now - dt).total_seconds() <= max_seconds
 
         return None, False
 
     # ──────────────────────────────────────────────────────────────────────────
     # STEP 1: Collect post links from the page feed
     # ──────────────────────────────────────────────────────────────────────────
-    def _collect_post_links(self, page, progress_callback=None):
+    def _collect_post_links(self, page, progress_callback=None, stop_urls=None, max_days=5):
         """
-        Scroll qua feed, thu thập các link bài viết POST trong 24h.
+        Scroll qua feed, thu thập các link bài viết POST trong max_days ngày gần đây.
         Trả về list[str] – danh sách URL bài viết không trùng.
         """
         post_links = {}   # url → posted_at  (hoặc None nếu chưa parse được time)
         seen = set()
 
-        MAX_SCROLLS = 40
+        MAX_SCROLLS = 80   # Tăng để cuộn đủ 5 ngày
         SCROLL_STEP  = 2500
         SCROLL_PAUSE = 2.5
-        MAX_OLD_STREAK = 4   # số bài cũ liên tiếp thì dừng
+        MAX_OLD_STREAK = 8   # Tăng để tránh dừng sớm với feed dày
         no_new_count = 0
         last_count = 0
         old_streak = 0
@@ -169,6 +173,14 @@ class HotPostScraper:
             "a[href*='/photos/'], a[href*='fbid='], a[href*='/permalink/']"
         )
 
+        def _get_post_id(url):
+            import re
+            m = re.search(r'(?:story_fbid=|fbid=|v=|/posts/|/permalink/|/videos/|/photos/a\.\d+/|/photo/\?fbid=)(pfbid[a-zA-Z0-9]+|\d+)', url)
+            if m:
+                return m.group(1)
+            clean = url.split('?')[0].rstrip('/')
+            return clean.split('/')[-1]
+
         def _normalize(url):
             if not url:
                 return url
@@ -176,32 +188,54 @@ class HotPostScraper:
                 url = 'https://www.facebook.com' + url
             if '?' in url and 'fbid=' not in url:
                 url = url.split('?')[0]
+            for tracking_param in ['__cft__', '__tn__', 'mibextid=', 'eav=', 'paipv=']:
+                if f'&{tracking_param}' in url:
+                    url = url.split(f'&{tracking_param}')[0]
+                if f'?{tracking_param}' in url:
+                    url = url.split(f'?{tracking_param}')[0]
             return url.rstrip('/')
+
+        seen_ids = set()
+        
+        stop_ids = set()
+        if stop_urls:
+            for u in stop_urls:
+                stop_ids.add(_get_post_id(u))
 
         def _scan_links():
             """Thu thập link & time từ DOM hiện tại."""
             nonlocal old_streak
             new_found = 0
+            should_stop = False
             try:
                 links = page.locator(LINK_SELECTOR).all()
                 for link_el in links:
                     try:
                         href = link_el.get_attribute('href') or ''
                         url = _normalize(href)
-                        if not url or url in seen:
+                        post_id = _get_post_id(url)
+                        
+                        if post_id in stop_ids:
+                            logger.info(f"Gặp bài cũ ({post_id}), dừng quét nối tiếp.")
+                            should_stop = True
+                            break
+
+                        if not url or url in seen or post_id in seen_ids:
                             continue
+                        
                         seen.add(url)
+                        seen_ids.add(post_id)
 
                         # Thử parse time từ text ngắn kế link
                         text = link_el.inner_text().strip()
                         posted_at = None
                         if text and len(text) < 20:
-                            dt, ok = self._parse_time_string(text)
+                            dt, ok = self._parse_time_string(text, max_days=max_days)
                             if ok:
                                 posted_at = dt
                                 old_streak = 0
                             elif dt is not None:
-                                # Bài cũ hơn 24h → tăng streak
+                                # Bài cũ hơn max_days → tăng streak
                                 old_streak += 1
                                 continue  # bỏ qua bài cũ
                         # Nếu không lấy được time từ text, vẫn thu thập URL để click sau
@@ -211,7 +245,7 @@ class HotPostScraper:
                         pass
             except Exception as e:
                 logger.debug(f"_scan_links error: {e}")
-            return new_found
+            return new_found, should_stop
 
         for i in range(MAX_SCROLLS):
             page.mouse.wheel(0, SCROLL_STEP)
@@ -220,7 +254,10 @@ class HotPostScraper:
             if progress_callback:
                 progress_callback(min(45, int((i / MAX_SCROLLS) * 45)))
 
-            new = _scan_links()
+            new, should_stop = _scan_links()
+            if should_stop:
+                break
+                
             current_count = len(post_links)
 
             if current_count == last_count:
@@ -354,16 +391,16 @@ class HotPostScraper:
         # ── Likes / Reactions ────────────────────────────────────────────────
         # Popup Facebook hiển thị count reactions dạng:
         #  <span aria-label="1,2K người bày tỏ cảm xúc">  hoặc text gọn "1,2K"
-        try:
-            labeled = dialog.locator("[aria-label]").all()
-            for el in labeled:
-                label = (el.get_attribute("aria-label") or "").lower()
-                if any(x in label for x in ['cảm xúc', 'react', 'lượt thích', 'likes', 'người thích']):
-                    n = self._parse_number(label)
-                    if n > likes:
-                        likes = n
-        except Exception:
-            pass
+        # try:
+        #     labeled = dialog.locator("[aria-label]").all()
+        #     for el in labeled:
+        #         label = (el.get_attribute("aria-label") or "").lower()
+        #         if any(x in label for x in ['cảm xúc', 'react', 'lượt thích', 'likes', 'người thích']):
+        #             n = self._parse_number(label)
+        #             if n > likes:
+        #                 likes = n
+        # except Exception:
+        #     pass
 
         # Fallback: số nhỏ cạnh emoji reactions
         if likes == 0:
@@ -394,18 +431,18 @@ class HotPostScraper:
                 pass
 
         # ── Comments ─────────────────────────────────────────────────────────
-        try:
-            # aria-label
-            labeled = dialog.locator("[aria-label]").all()
-            for el in labeled:
-                label = (el.get_attribute("aria-label") or "").lower()
-                if 'bình luận' in label or 'comment' in label:
-                    if label not in ['bình luận', 'viết bình luận', 'comment', 'write a comment']:
-                        n = self._parse_number(label)
-                        if n > comments:
-                            comments = n
-        except Exception:
-            pass
+        # try:
+        #     # aria-label
+        #     labeled = dialog.locator("[aria-label]").all()
+        #     for el in labeled:
+        #         label = (el.get_attribute("aria-label") or "").lower()
+        #         if 'bình luận' in label or 'comment' in label:
+        #             if label not in ['bình luận', 'viết bình luận', 'comment', 'write a comment']:
+        #                 n = self._parse_number(label)
+        #                 if n > comments:
+        #                     comments = n
+        # except Exception:
+        #     pass
 
         if comments == 0:
             try:
@@ -421,17 +458,17 @@ class HotPostScraper:
                 pass
 
         # ── Shares ───────────────────────────────────────────────────────────
-        try:
-            labeled = dialog.locator("[aria-label]").all()
-            for el in labeled:
-                label = (el.get_attribute("aria-label") or "").lower()
-                if ('chia sẻ' in label or 'share' in label):
-                    if label not in ['chia sẻ', 'share', 'chia sẻ bài viết', 'share post']:
-                        n = self._parse_number(label)
-                        if n > shares:
-                            shares = n
-        except Exception:
-            pass
+        # try:
+        #     labeled = dialog.locator("[aria-label]").all()
+        #     for el in labeled:
+        #         label = (el.get_attribute("aria-label") or "").lower()
+        #         if ('chia sẻ' in label or 'share' in label):
+        #             if label not in ['chia sẻ', 'share', 'chia sẻ bài viết', 'share post']:
+        #                 n = self._parse_number(label)
+        #                 if n > shares:
+        #                     shares = n
+        # except Exception:
+        #     pass
 
         if shares == 0:
             try:
@@ -464,10 +501,10 @@ class HotPostScraper:
     # ──────────────────────────────────────────────────────────────────────────
     # MAIN: scrape_page
     # ──────────────────────────────────────────────────────────────────────────
-    def scrape_page(self, account_cookies, page_url, progress_callback=None):
+    def scrape_page(self, account_cookies, page_url, progress_callback=None, stop_urls=None, max_days=5):
         """
         Luồng:
-          1. Load trang, cuộn để lấy hết link bài viết trong 24h
+          1. Load trang, cuộn để lấy hết link bài viết trong max_days ngày gần đây
           2. Với mỗi link: click → popup → parse chi tiết
           3. Trả về list[dict] đã sort theo tương tác (likes + comments + shares)
         """
@@ -513,8 +550,8 @@ class HotPostScraper:
                     pass
 
                 # ── BƯỚC 1: Thu thập link ─────────────────────────────────────
-                post_links = self._collect_post_links(page, progress_callback)
-                logger.info(f"Found {len(post_links)} post links to process.")
+                post_links = self._collect_post_links(page, progress_callback, stop_urls, max_days=max_days)
+                logger.info(f"Found {len(post_links)} post links to process (max_days={max_days}).")
 
                 if progress_callback:
                     progress_callback(48)
@@ -570,8 +607,28 @@ class HotPostScraper:
                             pass
                         continue
 
-                # ── BƯỚC 3: Sort by engagement ────────────────────────────────
-                results.sort(
+                # ── BƯỚC 3: Sort by engagement & Deduplicate ──────────────────
+                seen_urls = set()
+                seen_captions = set()
+                unique_results = []
+                for r in results:
+                    _url = r['post_url']
+                    _cap = r.get('caption', '').strip()
+                    
+                    is_duplicate = False
+                    if _url in seen_urls:
+                        is_duplicate = True
+                        
+                    if _cap and len(_cap) > 10 and _cap in seen_captions:
+                        is_duplicate = True
+                        
+                    if not is_duplicate:
+                        seen_urls.add(_url)
+                        if _cap:
+                            seen_captions.add(_cap)
+                        unique_results.append(r)
+
+                unique_results.sort(
                     key=lambda r: r['likes'] + r['comments'] * 2 + r['shares'] * 3,
                     reverse=True,
                 )
@@ -580,9 +637,9 @@ class HotPostScraper:
                     progress_callback(100)
 
                 logger.info(
-                    f"Done. {len(results)} posts collected and sorted by engagement."
+                    f"Done. {len(unique_results)} posts collected and sorted by engagement."
                 )
-                return results
+                return unique_results
 
             except Exception as e:
                 logger.error(f"Fatal error scraping {page_url}: {e}")

@@ -1,5 +1,7 @@
 from django.contrib import admin
 from .models import FacebookAccount, FacebookGroup, ShareCampaign, ShareLog, ObservedPage, HotPost
+from .tasks import scrape_page_background_task
+from django.contrib import messages
 
 @admin.register(FacebookAccount)
 class FacebookAccountAdmin(admin.ModelAdmin):
@@ -24,10 +26,23 @@ class ShareLogAdmin(admin.ModelAdmin):
     list_filter = ('status', 'campaign')
     search_fields = ('campaign__name', 'account__name', 'group__name')
 
+@admin.action(description='Lên Lịch Quét Bài Viết (Background Task)')
+def queue_scan_tasks(modeladmin, request, queryset):
+    count = 0
+    for page in queryset:
+        if page.user:
+            scrape_page_background_task(page.id, page.user.id)
+            page.scrape_status = 'queued'
+            page.save()
+            count += 1
+    messages.success(request, f"Đã đưa {count} Fanpage vào hàng chờ Quét (Background Tasks).")
+
 @admin.register(ObservedPage)
 class ObservedPageAdmin(admin.ModelAdmin):
-    list_display = ('name', 'url', 'created_at')
-    search_fields = ('name',)
+    list_display = ('id', 'name', 'user', 'is_auto_scan', 'auto_scan_time', 'scrape_status', 'last_scraped_at')
+    list_filter = ('is_auto_scan', 'scrape_status', 'user')
+    search_fields = ('name', 'url')
+    actions = [queue_scan_tasks]
 
 @admin.register(HotPost)
 class HotPostAdmin(admin.ModelAdmin):

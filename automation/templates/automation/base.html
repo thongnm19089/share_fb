@@ -77,6 +77,19 @@
                     <a href="{% url 'hot_post_list' %}" class="mb-1 text-warning"><i class="fas fa-fire me-2"></i> Hot
                         Posts</a>
                     <a href="{% url 'page_list' %}" class="mb-1"><i class="fas fa-flag me-2"></i> Observed Pages</a>
+                    <a href="{% url 'task_manager' %}" class="mb-1"><i class="fas fa-tasks me-2"></i> Background
+                        Tasks</a>
+                    <hr class="text-white-50 my-2">
+                    {% if user.is_authenticated %}
+                    <div class="px-3 mt-3 mb-3">
+                        <small class="text-white-50">Tài khoản: {{ user.username }}</small><br>
+                        <form method="post" action="{% url 'logout' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger mt-2 w-100"><i
+                                    class="fas fa-sign-out-alt"></i> Đăng xuất</button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

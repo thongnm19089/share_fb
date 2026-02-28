@@ -15,7 +15,19 @@
                     <input type="url" name="url" class="form-control" required
                         placeholder="https://www.facebook.com/beatvn.network/">
                 </div>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Page</button>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="is_auto_scan" name="is_auto_scan">
+                    <label class="form-check-label" for="is_auto_scan">Tự động quét lịch sử hàng ngày bằng Cron (mũi tên
+                        ẩn)</label>
+                </div>
+
+                <div class="mb-3">
+                    <label for="auto_scan_time" class="form-label">Giờ Tự Động Quét</label>
+                    <input type="time" class="form-control" id="auto_scan_time" name="auto_scan_time">
+                    <div class="form-text">Bỏ trống để chạy mặc định (00:00 và 12:00) hoặc đặt ví dụ 08:30</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Bắt đầu Theo Dõi</button>
                 <a href="{% url 'page_list' %}" class="btn btn-secondary">Cancel</a>
             </form>
         </div>

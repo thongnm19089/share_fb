@@ -14,6 +14,7 @@ urlpatterns = [
     # Hot Posts feature
     path('pages/', views.page_list, name='page_list'),
     path('pages/add/', views.add_page, name='add_page'),
+    path('tasks/', views.task_manager, name='task_manager'),
     path('pages/<int:page_id>/scrape/', views.scrape_page_view, name='scrape_page'),
     path('pages/scrape-all/', views.scrape_all_pages_view, name='scrape_all_pages'),
     path('hot-posts/', views.hot_post_list, name='hot_post_list'),
@@ -21,4 +22,5 @@ urlpatterns = [
     # API Endpoints
     path('api/scrape/start/', views.api_start_scrape, name='api_start_scrape'),
     path('api/scrape/status/<str:job_id>/', views.api_scrape_status, name='api_scrape_status'),
+    path('api/posts/', views.api_get_posts, name='api_get_posts'),
 ]

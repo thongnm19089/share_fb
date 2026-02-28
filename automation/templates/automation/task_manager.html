@@ -1,0 +1,122 @@
+{% extends 'automation/base.html' %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3">Quản Lý Tác Vụ Ngầm (Background Tasks)</h3>
+        <p class="text-muted mb-0">Lên lịch quét Fanpage tự động hoặc xem chi tiết các tiến trình ngầm đang chờ xử lý.
+            <br><small><i class="fas fa-info-circle"></i> Đảm bảo Service `python manage.py process_tasks` đang bật trên
+                Server để hệ thống tự động chạy các job này.</small>
+        </p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6 col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i> Lên Lịch / Chạy Quét Hàng Loạt</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-secondary small">Hành động này sẽ kích hoạt <span
+                        class="badge bg-dark">run_auto_scan</span> quét mọi Fanpage đang bật tính năng Tự Động Quét
+                    trong hệ thống.</p>
+                <form method="POST" action="{% url 'task_manager' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_task">
+
+                    <div class="mb-3">
+                        <label for="schedule_time" class="form-label fw-bold">Lần Chạy Kế Tiếp (Không bắt buộc)</label>
+                        <input type="datetime-local" class="form-control" id="schedule_time" name="schedule_time">
+                        <div class="form-text">Bỏ trống ô này nếu bạn muốn đẩy vào hàng chờ và bắt đầu quét ngay lập
+                            tức.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="repeat_option" class="form-label fw-bold">Lặp Lại (Repeat)</label>
+                        <select class="form-select" id="repeat_option" name="repeat_option">
+                            <option value="">Không lặp lại (Chạy 1 lần)</option>
+                            <option value="3600">Mỗi 1 Giờ (Hourly)</option>
+                            <option value="86400">Mỗi Ngày (Daily)</option>
+                            <option value="604800">Mỗi Tuần (Weekly)</option>
+                            <option value="1209600">Mỗi 2 Tuần (Bi-Weekly)</option>
+                            <option value="2592000">Mỗi 30 Ngày</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-rocket me-2"></i> Lên lịch Quét Toàn Bộ (Queue Master Task)
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 col-12 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-spinner fa-spin me-2"></i> Tasks Đang Chờ (Pending)</h5>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Tên Task</th>
+                            <th scope="col">Hẹn Giờ Chạy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in pending_tasks %}
+                        <tr>
+                            <td>#{{ task.id }}</td>
+                            <td><span class="badge bg-secondary">{{ task.task_name|slice:"-25:" }}</span></td>
+                            <td><span class="text-danger fw-bold">{{ task.run_at|date:"d/m/Y H:i:s" }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                <i class="fas fa-check-circle fa-2x mb-2 text-success opacity-50"></i><br>
+                                Không có Task chờ nào.<br> Hệ thống đang rảnh.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-12 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i> Tasks Đã Xong (Completed)</h5>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Mã Job</th>
+                            <th scope="col">Giờ Hoàn Thành</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c_task in completed_tasks %}
+                        <tr>
+                            <td><span class="text-muted">#{{ c_task.id }}</span></td>
+                            <td><span class="text-success"><i class="fas fa-check me-1"></i> {{
+                                    c_task.run_at|date:"d/m/Y H:i" }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center py-4 text-muted">Chưa có dữ liệu task hoàn thành.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
