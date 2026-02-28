@@ -4,3 +4,24 @@ venv/*
 venv/
 __pycache__/
 *.pyc
+
+# Browser profile (Playwright/Chromium - đừng commit)
+fb_browser_profile/
+
+# Django
+*.log
+local_settings.py
+media/
+staticfiles/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
