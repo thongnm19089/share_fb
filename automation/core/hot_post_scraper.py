@@ -517,7 +517,7 @@ class HotPostScraper:
             # Khởi chạy một trình duyệt cố định thay vì incognito
             context = p.chromium.launch_persistent_context(
                 user_data_dir=user_data_dir,
-                headless=False,  # Bỏ chế độ chạy ẩn (headless) theo yêu cầu User
+                headless=True,  # Chạy ẩn - bắt buộc trên server không có màn hình
                 args=[
                     '--disable-notifications', 
                     '--no-sandbox', 
