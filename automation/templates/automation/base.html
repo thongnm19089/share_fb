@@ -37,6 +37,8 @@
 
         .main-content {
             padding: 30px;
+            background-color: #d4d0d0;
+            min-height: 100vh;
         }
 
         .card {
@@ -58,6 +60,45 @@
             color: #6c757d;
             border-top: none;
         }
+
+        /* ── Mobile responsive ── */
+        @media (max-width: 767.98px) {
+            .sidebar {
+                min-height: auto;
+                padding: 8px 0;
+            }
+
+            .sidebar h4 {
+                font-size: 1rem;
+                margin-bottom: 0.5rem !important;
+            }
+
+            .sidebar .list-group {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 2px;
+            }
+
+            .sidebar a {
+                padding: 6px 10px;
+                font-size: 0.78rem;
+                border-radius: 4px;
+            }
+
+            .sidebar hr {
+                display: none;
+            }
+
+            .sidebar .px-3 {
+                display: none;
+            }
+
+            /* Ẩn logout trên mobile */
+            .main-content {
+                padding: 10px 8px;
+            }
+        }
     </style>
 </head>
 
@@ -65,7 +106,7 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-2 sidebar px-2">
+            <div class="col-md-2 col-12 sidebar px-2">
                 <h4 class="text-center mb-4"><i class="fab fa-facebook text-primary"></i> FbTool Pro</h4>
                 <div class="list-group list-group-flush ms-2 me-2">
                     <a href="{% url 'dashboard' %}" class="mb-1"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
@@ -94,7 +135,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-10 main-content">
+            <div class="col-md-10 col-12 main-content">
                 {% if messages %}
                 {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">

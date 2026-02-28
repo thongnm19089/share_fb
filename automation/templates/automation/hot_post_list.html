@@ -179,25 +179,27 @@
                 const defaultSnippet = "[Không có nội dung text]";
 
                 html += `
-            <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
-                <div class="card h-100 shadow-sm border-${borderClass}">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-primary text-truncate flex-grow-1"><i class="fas fa-flag"></i> ${post.page_name || 'Page'}</span>
-                        <a href="${post.post_url}" target="_blank" class="text-decoration-none text-muted small ms-2 text-nowrap" title="Xem Bài">
+            <div class="col-6 col-sm-6 col-md-4 col-xl-3 mb-2">
+                <div class="card h-100 shadow-sm border-${borderClass}" style="background:#f8f9fa;">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-1 px-2">
+                        <span class="fw-bold text-primary text-truncate flex-grow-1 small" style="font-size:0.85rem;"><i class="fas fa-flag"></i> ${post.page_name || 'Page'}</span>
+                        <a href="${post.post_url}" target="_blank" class="text-decoration-none text-primary ms-1 text-nowrap" style="font-size:0.8rem;" title="Xem Bài">
                             <i class="far fa-clock"></i> ${timeStr}
                         </a>
                     </div>
-                    <div class="card-body">
-                        <p class="card-text text-truncate-multiline"
-                            style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                    <div class="card-body py-1 px-2 d-flex flex-column" style="background:#f8f9fa;">
+                        <p class="card-text mb-1"
+                            style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.88rem;">
                             ${post.content_snippet || defaultSnippet}
                         </p>
-                        <hr>
-                        <div class="d-flex justify-content-between text-muted small">
+                        <div class="mt-auto" style="padding-bottom:2px;">
+                        <hr class="my-1">
+                        <div class="d-flex justify-content-between text-muted" style="font-size:0.8rem;">
                             <span title="Likes"><i class="fas fa-thumbs-up text-primary"></i> ${post.likes || 0}</span>
                             <span title="Comments"><i class="fas fa-comment text-warning"></i> ${post.comments || 0}</span>
                             <span title="Shares"><i class="fas fa-share text-success"></i> ${post.shares || 0}</span>
                             <strong title="Total Engagement" class="text-danger"><i class="fas fa-fire"></i> ${post.total_engagement || 0}</strong>
+                        </div>
                         </div>
                     </div>
                 </div>
