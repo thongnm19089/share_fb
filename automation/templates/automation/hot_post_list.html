@@ -257,11 +257,11 @@
         // Set up IntersectionObserver for Infinite Scrolling
         const observerOptions = {
             root: null,
-            rootMargin: '0px',
-            threshold: 0.1
+            rootMargin: '400px',   // Trigger khi còn cách đáy 400px
+            threshold: 0
         };
 
-        const observer = new IntersectionObserver((entries, observer) => {
+        const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting && hasMore && !isLoading) {
                     loadHistoryPosts();
@@ -271,6 +271,16 @@
 
         // Start observing the load more button anchor
         observer.observe(document.getElementById('scroll-detector'));
+
+        // Fallback: window scroll event (đề phòng layout đặc biệt)
+        window.addEventListener('scroll', function () {
+            if (!hasMore || isLoading) return;
+            const scrollBottom = window.scrollY + window.innerHeight;
+            const docHeight = document.documentElement.scrollHeight;
+            if (scrollBottom >= docHeight - 300) {
+                loadHistoryPosts();
+            }
+        });
 
         // Load page 1 automatically on startup
         loadHistoryPosts();
