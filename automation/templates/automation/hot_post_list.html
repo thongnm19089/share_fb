@@ -256,8 +256,8 @@
 
         // Set up IntersectionObserver for Infinite Scrolling
         const observerOptions = {
-            root: null,
-            rootMargin: '400px',   // Trigger khi còn cách đáy 400px
+            root: null,          // viewport - body scroll tự nhiên
+            rootMargin: '400px',
             threshold: 0
         };
 
@@ -269,20 +269,16 @@
             });
         }, observerOptions);
 
-        // Start observing the load more button anchor
         observer.observe(document.getElementById('scroll-detector'));
 
-        // Fallback: window scroll event (đề phòng layout đặc biệt)
+        // Fallback window scroll
         window.addEventListener('scroll', function () {
             if (!hasMore || isLoading) return;
-            const scrollBottom = window.scrollY + window.innerHeight;
-            const docHeight = document.documentElement.scrollHeight;
-            if (scrollBottom >= docHeight - 300) {
+            if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 300) {
                 loadHistoryPosts();
             }
         });
 
-        // Load page 1 automatically on startup
         loadHistoryPosts();
     });
 </script>

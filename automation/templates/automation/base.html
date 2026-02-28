@@ -14,14 +14,18 @@
             font-family: 'Inter', sans-serif;
         }
 
+        /* === SIDEBAR CỐ ĐỊNH === */
         .sidebar {
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            width: 16.666%;
             height: 100vh;
             overflow-y: auto;
             background: #2c3e50;
             color: white;
             padding-top: 20px;
+            z-index: 100;
         }
 
         .sidebar a {
@@ -39,7 +43,9 @@
             border-radius: 4px;
         }
 
+        /* === NỘI DUNG CHÍNH - body scroll tự nhiên === */
         .main-content {
+            margin-left: 16.666%;
             padding: 30px;
             background-color: #d4d0d0;
             min-height: 100vh;
@@ -55,8 +61,7 @@
             background: #fff;
             border-bottom: 1px solid #f0f0f0;
             font-weight: 600;
-            font-size: 1.1rem;
-            padding: 15px 20px;
+            padding: 10px 15px;
         }
 
         .table th {
@@ -65,19 +70,19 @@
             border-top: none;
         }
 
-        /* ── Mobile responsive ── */
+        /* === MOBILE === */
         @media (max-width: 767.98px) {
             .sidebar {
                 position: static;
+                width: 100%;
                 height: auto;
                 overflow-y: visible;
-                min-height: auto;
                 padding: 8px 0;
             }
 
             .sidebar h4 {
                 font-size: 1rem;
-                margin-bottom: 0.5rem !important;
+                margin-bottom: 0.3rem !important;
             }
 
             .sidebar .list-group {
@@ -88,21 +93,17 @@
             }
 
             .sidebar a {
-                padding: 6px 10px;
-                font-size: 0.78rem;
-                border-radius: 4px;
+                padding: 5px 8px;
+                font-size: 0.75rem;
             }
 
-            .sidebar hr {
-                display: none;
-            }
-
+            .sidebar hr,
             .sidebar .px-3 {
                 display: none;
             }
 
-            /* Ẩn logout trên mobile */
             .main-content {
+                margin-left: 0;
                 padding: 10px 8px;
             }
         }
@@ -110,53 +111,48 @@
 </head>
 
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-2 col-12 sidebar px-2">
-                <h4 class="text-center mb-4"><i class="fab fa-facebook text-primary"></i> FbTool Pro</h4>
-                <div class="list-group list-group-flush ms-2 me-2">
-                    <a href="{% url 'dashboard' %}" class="mb-1"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
-                    <a href="{% url 'add_account' %}" class="mb-1"><i class="fas fa-users-cog me-2"></i>
-                        Accounts</a>
-                    <a href="{% url 'group_list' %}" class="mb-1"><i class="fas fa-users me-2"></i> Groups</a>
-                    <a href="{% url 'campaign_list' %}" class="mb-1"><i class="fas fa-share-alt me-2"></i> Campaigns</a>
-                    <hr class="text-white-50 my-2">
-                    <a href="{% url 'hot_post_list' %}" class="mb-1 text-warning"><i class="fas fa-fire me-2"></i> Hot
-                        Posts</a>
-                    <a href="{% url 'page_list' %}" class="mb-1"><i class="fas fa-flag me-2"></i> Observed Pages</a>
-                    <a href="{% url 'task_manager' %}" class="mb-1"><i class="fas fa-tasks me-2"></i> Background
-                        Tasks</a>
-                    <hr class="text-white-50 my-2">
-                    {% if user.is_authenticated %}
-                    <div class="px-3 mt-3 mb-3">
-                        <small class="text-white-50">Tài khoản: {{ user.username }}</small><br>
-                        <form method="post" action="{% url 'logout' %}" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-danger mt-2 w-100"><i
-                                    class="fas fa-sign-out-alt"></i> Đăng xuất</button>
-                        </form>
-                    </div>
-                    {% endif %}
-                </div>
+    <!-- Sidebar -->
+    <div class="sidebar px-2">
+        <h4 class="text-center mb-4"><i class="fab fa-facebook text-primary"></i> FbTool Pro</h4>
+        <div class="list-group list-group-flush ms-2 me-2">
+            <a href="{% url 'dashboard' %}" class="mb-1"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+            <a href="{% url 'add_account' %}" class="mb-1"><i class="fas fa-users-cog me-2"></i> Accounts</a>
+            <a href="{% url 'group_list' %}" class="mb-1"><i class="fas fa-users me-2"></i> Groups</a>
+            <a href="{% url 'campaign_list' %}" class="mb-1"><i class="fas fa-share-alt me-2"></i> Campaigns</a>
+            <hr class="text-white-50 my-2">
+            <a href="{% url 'hot_post_list' %}" class="mb-1 text-warning"><i class="fas fa-fire me-2"></i> Hot Posts</a>
+            <a href="{% url 'page_list' %}" class="mb-1"><i class="fas fa-flag me-2"></i> Observed Pages</a>
+            <a href="{% url 'task_manager' %}" class="mb-1"><i class="fas fa-tasks me-2"></i> Background Tasks</a>
+            <hr class="text-white-50 my-2">
+            {% if user.is_authenticated %}
+            <div class="px-3 mt-3 mb-3">
+                <small class="text-white-50">Tài khoản: {{ user.username }}</small><br>
+                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger mt-2 w-100">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </button>
+                </form>
             </div>
-
-            <!-- Main Content -->
-            <div class="col-md-10 col-12 main-content">
-                {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endfor %}
-                {% endif %}
-
-                {% block content %}
-                {% endblock %}
-            </div>
+            {% endif %}
         </div>
     </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
