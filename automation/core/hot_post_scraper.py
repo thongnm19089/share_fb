@@ -338,7 +338,7 @@ class HotPostScraper:
                 for el in time_candidates:
                     txt = el.inner_text().strip()
                     if txt and len(txt) < 25:
-                        dt, ok = self._parse_time_string(txt)
+                        dt, ok = self._parse_time_string(txt, max_days=5)
                         if ok and dt:
                             posted_at = dt
                             time_raw = txt
@@ -351,9 +351,9 @@ class HotPostScraper:
             try:
                 full_text = dialog.inner_text()
                 for m in re.finditer(
-                    r'(\d+)\s*(phút|giờ|mins?|hrs?|h)\b', full_text, re.IGNORECASE
+                    r'(\d+)\s*(phút|giờ|ngày|mins?|hrs?|days?|h)\b', full_text, re.IGNORECASE
                 ):
-                    dt, ok = self._parse_time_string(m.group(0))
+                    dt, ok = self._parse_time_string(m.group(0), max_days=5)
                     if ok and dt:
                         posted_at = dt
                         time_raw = m.group(0)
