@@ -85,8 +85,13 @@
                         clearInterval(pollInterval);
                         setTimeout(() => {
                             progressWrapper.classList.add('d-none');
-                            renderPosts(data.results);
                             btnScrapeAll.disabled = false;
+                            // Reset và tải lại danh sách từ DB (tự động hiển thị sau quét)
+                            currentPage = 1;
+                            hasMore = true;
+                            lastRenderedDate = null;
+                            postsContainer.innerHTML = '';
+                            loadHistoryPosts();
                         }, 500);
                     }
                 })
