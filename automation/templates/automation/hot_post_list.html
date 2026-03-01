@@ -1,16 +1,21 @@
 {% extends 'automation/base.html' %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3 align-items-center">
-    <div class="d-flex align-items-center">
-        <h3 class="mb-0">Bài Viết Nổi Bật (Lịch sử)</h3>
-        <select id="sort-select" class="form-select form-select-sm ms-3" style="width: auto;">
-            <option value="engagement">Tương tác Cao nhất</option>
-            <option value="time" selected>Bài mới nhất</option>
-        </select>
-    </div>
-    <div>
-        <button id="btn-scrape-all" class="btn btn-success me-2"><i class="fas fa-robot"></i> Quét Tất Cả Pages</button>
-        <a href="{% url 'page_list' %}" class="btn btn-outline-primary"><i class="fas fa-cog"></i> Quản lý Pages</a>
+<!-- Header responsive: stack on mobile -->
+<div class="mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <h5 class="mb-0 fw-bold">🔥 Bài Viết Nổi Bật</h5>
+            <select id="sort-select" class="form-select form-select-sm" style="width: auto; min-width: 130px;">
+                <option value="engagement">Tương tác Cao nhất</option>
+                <option value="time" selected>Bài mới nhất</option>
+            </select>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="btn-scrape-all" class="btn btn-success btn-sm"><i class="fas fa-robot"></i> <span
+                    class="d-none d-sm-inline">Quét Tất Cả Pages</span><span class="d-sm-none">Quét</span></button>
+            <a href="{% url 'page_list' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-cog"></i> <span
+                    class="d-none d-sm-inline">Quản lý Pages</span><span class="d-sm-none">Pages</span></a>
+        </div>
     </div>
 </div>
 
@@ -179,13 +184,15 @@
                 const defaultSnippet = "[Không có nội dung text]";
 
                 html += `
-            <div class="col-6 col-sm-6 col-md-4 col-xl-3 mb-2">
+            <div class="col-6 col-md-4 col-xl-3 mb-2">
                 <div class="card h-100 shadow-sm border-${borderClass}" style="background:#f8f9fa;">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-1 px-2">
-                        <span class="fw-bold text-primary text-truncate flex-grow-1 small" style="font-size:0.85rem;"><i class="fas fa-flag"></i> ${post.page_name || 'Page'}</span>
-                        <a href="${post.post_url}" target="_blank" class="text-decoration-none text-primary ms-1 text-nowrap" style="font-size:0.8rem;" title="Xem Bài">
-                            <i class="far fa-clock"></i> ${timeStr}
-                        </a>
+                    <div class="card-header bg-white py-1 px-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-primary text-truncate small" style="font-size:0.82rem; max-width:55%;"><i class="fas fa-flag me-1"></i>${post.page_name || 'Page'}</span>
+                            <a href="${post.post_url}" target="_blank" class="text-decoration-none text-secondary text-nowrap" style="font-size:0.75rem;" title="Xem Bài">
+                                <i class="far fa-clock"></i> ${timeStr}
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body py-1 px-2 d-flex flex-column" style="background:#f8f9fa;">
                         <p class="card-text mb-1"
