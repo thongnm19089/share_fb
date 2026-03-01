@@ -4,8 +4,8 @@
     <div class="d-flex align-items-center">
         <h3 class="mb-0">Bài Viết Nổi Bật (Lịch sử)</h3>
         <select id="sort-select" class="form-select form-select-sm ms-3" style="width: auto;">
-            <option value="engagement" selected>Tương tác Cao nhất</option>
-            <option value="time">Bài mới nhất</option>
+            <option value="engagement">Tương tác Cao nhất</option>
+            <option value="time" selected>Bài mới nhất</option>
         </select>
     </div>
     <div>
@@ -215,7 +215,7 @@
         let hasMore = true;
         const btnLoadMore = document.getElementById('btn-load-more');
 
-        let currentSort = 'engagement';
+        let currentSort = 'time';
         const sortSelect = document.getElementById('sort-select');
 
         sortSelect.addEventListener('change', function () {
