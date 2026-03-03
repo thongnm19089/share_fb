@@ -151,10 +151,10 @@ class HotPostScraper:
     # ──────────────────────────────────────────────────────────────────────────
     # STEP 1: Collect post links from the page feed
     # ──────────────────────────────────────────────────────────────────────────
-    def _collect_post_links(self, page, progress_callback=None, stop_urls=None, max_days=5):
+    def _collect_post_links(self, page, progress_callback=None, stop_urls=None, max_days=5, max_posts=50):
         """
         Scroll qua feed, thu thập các link bài viết POST trong max_days ngày gần đây.
-        Trả về list[str] – danh sách URL bài viết không trùng.
+        Trả về list[str] – danh sách URL bài viết không trùng (tối đa max_posts).
         """
         post_links = {}   # url → posted_at  (hoặc None nếu chưa parse được time)
         seen = set()
@@ -273,10 +273,15 @@ class HotPostScraper:
                 logger.info(f"Hit {old_streak} old posts in a row, stopping scroll.")
                 break
 
+            if len(post_links) >= max_posts:
+                logger.info(f"Reached max posts limit ({max_posts}), stopping scroll.")
+                break
+
             logger.debug(f"Scroll {i+1}: total links={current_count}, old_streak={old_streak}")
 
-        logger.info(f"Collected {len(post_links)} post links.")
-        return list(post_links.keys())
+        all_links = list(post_links.keys())[:max_posts]
+        logger.info(f"Collected {len(all_links)} post links (limited to {max_posts}).")
+        return all_links
 
     # ──────────────────────────────────────────────────────────────────────────
     # STEP 2: Click từng link → mở popup → parse chi tiết
@@ -501,7 +506,7 @@ class HotPostScraper:
     # ──────────────────────────────────────────────────────────────────────────
     # MAIN: scrape_page
     # ──────────────────────────────────────────────────────────────────────────
-    def scrape_page(self, account_cookies, page_url, progress_callback=None, stop_urls=None, max_days=5):
+    def scrape_page(self, account_cookies, page_url, progress_callback=None, stop_urls=None, max_days=5, max_posts=50):
         """
         Luồng:
           1. Load trang, cuộn để lấy hết link bài viết trong max_days ngày gần đây
@@ -550,8 +555,8 @@ class HotPostScraper:
                     pass
 
                 # ── BƯỚC 1: Thu thập link ─────────────────────────────────────
-                post_links = self._collect_post_links(page, progress_callback, stop_urls, max_days=max_days)
-                logger.info(f"Found {len(post_links)} post links to process (max_days={max_days}).")
+                post_links = self._collect_post_links(page, progress_callback, stop_urls, max_days=max_days, max_posts=max_posts)
+                logger.info(f"Found {len(post_links)} post links to process (max_days={max_days}, max_posts={max_posts}).")
 
                 if progress_callback:
                     progress_callback(48)

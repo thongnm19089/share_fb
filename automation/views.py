@@ -220,8 +220,9 @@ def run_scrape_job_thread(job_id, page_ids, account_cookies):
                     page_contribution = (pct / 100.0) * (100.0 / total_pages)
                     job['progress'] = base_progress + int(page_contribution)
 
-                existing_urls = list(HotPost.objects.filter(page=page).values_list('post_url', flat=True)[:100])
-                results = scraper.scrape_page(account_cookies, page.url, progress_callback=progress_cb, stop_urls=existing_urls)
+                # Stop on existing entries (ordered by most recent)
+                existing_urls = list(HotPost.objects.filter(page=page).order_by('-posted_at').values_list('post_url', flat=True)[:100])
+                results = scraper.scrape_page(account_cookies, page.url, progress_callback=progress_cb, stop_urls=existing_urls, max_days=5, max_posts=50)
                 
                 # Update saving logic to prevent dropping existing data and use update_or_create instead
                 for p in results:
@@ -331,7 +332,11 @@ def scrape_all_pages_view(request):
 
 @login_required
 def hot_post_list(request):
-    return render(request, 'automation/hot_post_list.html')
+    latest_page = ObservedPage.objects.order_by('-last_scraped_at').first()
+    context = {
+        'latest_scraped_at': latest_page.last_scraped_at if latest_page else None
+    }
+    return render(request, 'automation/hot_post_list.html', context)
 
 @login_required
 def api_get_posts(request):
