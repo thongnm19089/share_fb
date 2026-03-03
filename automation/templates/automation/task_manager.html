@@ -118,8 +118,7 @@
                         {% for c_task in completed_tasks %}
                         <tr>
                             <td><span class="text-muted">#{{ c_task.id }}</span></td>
-                            <td><span class="text-success"><i class="fas fa-check me-1"></i> {{
-                                    c_task.run_at|date:"d/m/Y H:i" }}</span></td>
+                            <td><span class="text-success"><i class="fas fa-check me-1"></i> {{ c_task.run_at|date:"d/m/Y H:i" }}</span></td>
                         </tr>
                         {% empty %}
                         <tr>
