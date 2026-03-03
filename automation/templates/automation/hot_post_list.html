@@ -7,8 +7,13 @@
             <h5 class="mb-0 fw-bold d-flex align-items-center">🔥 <span class="d-none d-sm-inline me-1">Bài Viết</span>
                 Nổi Bật <span class="badge bg-light text-dark ms-2 border fw-normal shadow-sm text-truncate"
                     style="font-size: 0.8rem; letter-spacing: -0.2px;"><i class="fas fa-clock text-muted"></i> <span
-                        class="d-none d-sm-inline">Cập nhật: </span>{% if latest_scraped_at %}{{
-                    latest_scraped_at|date:"d/m H:i" }}{% else %}---{% endif %}</span></h5>
+                        class="d-none d-sm-inline">Cập nhật: </span>
+                    {% if latest_scraped_at %}
+                    {{ latest_scraped_at|date:"d/m H:i" }}
+                    {% else %}
+                    ---
+                    {% endif %}
+                </span></h5>
             <select id="sort-select" class="form-select form-select-sm" style="width: auto; min-width: 130px;">
                 <option value="engagement">Tương tác Cao nhất</option>
                 <option value="time" selected>Bài mới nhất</option>
