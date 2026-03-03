@@ -427,9 +427,13 @@ def task_manager(request):
     pending_tasks = Task.objects.all().order_by('run_at')
     completed_tasks = CompletedTask.objects.all().order_by('-run_at')[:20]
     
+    # Get local aware server time and convert to Javascript-friendly ISO format
+    server_time = timezone.localtime(timezone.now())
+    
     context = {
         'user_pages': user_pages,
         'pending_tasks': pending_tasks,
-        'completed_tasks': completed_tasks
+        'completed_tasks': completed_tasks,
+        'server_time_iso': server_time.isoformat()
     }
     return render(request, 'automation/task_manager.html', context)
