@@ -28,19 +28,23 @@ def scrape_page_background_task(page_id, user_id):
         account_cookies = account.cookies
         scraper = HotPostScraper(headless=True)
         
-        # Stop on existing entries (ordered by most recent)
-        existing_urls = list(HotPost.objects.filter(page=page).order_by('-posted_at').values_list('post_url', flat=True)[:100])
+        # Stop on existing entries ONLY if they are older than 30 hours
+        # so we STILL SCRAPE and UPDATE points for posts younger than 30 hours.
+        from datetime import timedelta
+        thirty_hours_ago = timezone.now() - timedelta(hours=30)
+        existing_urls = list(HotPost.objects.filter(page=page, posted_at__lt=thirty_hours_ago).order_by('-posted_at').values_list('post_url', flat=True)[:100])
         
         results = scraper.scrape_page(account_cookies, page.url, stop_urls=existing_urls, max_days=5, max_posts=50)
         
         # Save results using update_or_create to preserve history
         for p in results:
             try:
+                # Update by post_url instead of page + post_url to enforce global URL uniqueness
                 HotPost.objects.update_or_create(
-                    page=page,
                     post_url=p['post_url'],
                     defaults={
-                        'content_snippet': p['content_snippet'],
+                        'page': page,
+                        'content_snippet': p.get('caption', ''),
                         'posted_at': p['posted_at'],
                         'likes_count': p['likes'],
                         'comments_count': p['comments'],

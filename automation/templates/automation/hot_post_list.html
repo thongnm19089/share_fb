@@ -44,6 +44,38 @@
 </div>
 
 <script>
+    function copyToClipboard(text, btn) {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).catch(err => {
+                fallbackCopyTextToClipboard(text);
+            });
+        } else {
+            fallbackCopyTextToClipboard(text);
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        const icon = btn.querySelector('i');
+        const oldClass = icon.className;
+        icon.className = 'fas fa-check text-success';
+        setTimeout(() => { icon.className = 'far fa-copy'; }, 2000);
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         const btnScrapeAll = document.getElementById('btn-scrape-all');
         const progressWrapper = document.getElementById('scrape-progress-wrapper');
@@ -211,8 +243,8 @@
                     </div>
                     <div class="card-body py-1 px-2 d-flex flex-column" style="background:#f8f9fa; position:relative;">
                         <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 border-0 p-1 mt-1 me-1 shadow-sm" 
-                            onclick="navigator.clipboard.writeText(this.dataset.snippet); const i=this.querySelector('i'); i.className='fas fa-check text-success'; setTimeout(()=>i.className='far fa-copy', 2000);" 
-                            data-snippet="${(post.content_snippet || '').replace(/"/g, '&quot;')}"
+                            onclick="copyToClipboard(this.dataset.snippet, this)" 
+                            data-snippet="${(post.content_snippet || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}"
                             title="Copy nội dung" style="background: rgba(255,255,255,0.9); z-index:2;">
                             <i class="far fa-copy"></i>
                         </button>

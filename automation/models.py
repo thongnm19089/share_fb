@@ -85,11 +85,11 @@ class HotPost(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['page', 'post_url'], name='unique_post_per_page')
+            models.UniqueConstraint(fields=['post_url'], name='unique_post_url')
         ]
 
     def save(self, *args, **kwargs):
-        self.total_engagement = self.likes_count + self.comments_count + self.shares_count
+        self.total_engagement = self.comments_count * 3 + self.shares_count * 2 + self.likes_count * 1
         super().save(*args, **kwargs)
 
     def __str__(self):

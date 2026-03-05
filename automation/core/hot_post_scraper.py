@@ -634,7 +634,7 @@ class HotPostScraper:
                         unique_results.append(r)
 
                 unique_results.sort(
-                    key=lambda r: r['likes'] + r['comments'] * 2 + r['shares'] * 3,
+                    key=lambda r: r['comments'] * 3 + r['shares'] * 2 + r['likes'] * 1,
                     reverse=True,
                 )
 
