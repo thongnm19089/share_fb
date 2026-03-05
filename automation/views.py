@@ -193,9 +193,9 @@ def add_page(request):
 @login_required
 def api_start_scrape(request):
     try:
-        pages = ObservedPage.objects.filter(user=request.user, is_auto_scan=True)
+        pages = ObservedPage.objects.filter(user=request.user)
         if not pages.exists():
-            return JsonResponse({'status': 'error', 'message': 'Không có Fanpage nào được bật [Tự động quét]. Vui lòng chỉnh sửa Fanpage và bật lên.'})
+            return JsonResponse({'status': 'error', 'message': 'Không có Fanpage nào để quét. Vui lòng thêm Fanpage trước.'})
             
         account = FacebookAccount.objects.filter(user=request.user, status='live').first()
         if not account:
@@ -216,7 +216,7 @@ def api_start_scrape(request):
 def api_scrape_status(request, job_id):
     # Tính % tiến độ dựa trên scrape_status trong Database
     try:
-        pages = ObservedPage.objects.filter(user=request.user, is_auto_scan=True)
+        pages = ObservedPage.objects.filter(user=request.user)
         total_pages = pages.count()
         if total_pages == 0:
             return JsonResponse({'status': 'completed', 'progress': 100})
