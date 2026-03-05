@@ -26,7 +26,7 @@ def scrape_page_background_task(page_id, user_id):
 
         # Init tool
         account_cookies = account.cookies
-        scraper = HotPostScraper(user_data_dir=f"fb_browser_profile_{user_id}")
+        scraper = HotPostScraper(headless=True)
         
         # Stop on existing entries (ordered by most recent)
         existing_urls = list(HotPost.objects.filter(page=page).order_by('-posted_at').values_list('post_url', flat=True)[:100])
