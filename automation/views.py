@@ -201,9 +201,9 @@ def api_start_scrape(request):
         if not account:
             return JsonResponse({'status': 'error', 'message': 'Không có tài khoản Facebook Live nào để quét.'})
 
-        # Đánh dấu các page là đang running/queued
+        # Dùng 'queued' để phân biệt: "đã đưa vào queue nhưng chưa bắt đầu"
         for p in pages:
-            p.scrape_status = 'running'
+            p.scrape_status = 'queued'
             p.save()
             scrape_page_background_task(p.id, request.user.id)
             
@@ -220,13 +220,13 @@ def api_scrape_status(request, job_id):
         total_pages = pages.count()
         if total_pages == 0:
             return JsonResponse({'status': 'completed', 'progress': 100})
-            
-        pages_done = pages.exclude(scrape_status='running').count()
+        
+        # In progress = queued + running
+        in_progress = pages.filter(scrape_status__in=['queued', 'running']).count()
+        pages_done = total_pages - in_progress
         progress = int((pages_done / total_pages) * 100)
         
-        status = 'running'
-        if pages_done == total_pages:
-            status = 'completed'
+        status = 'running' if in_progress > 0 else 'completed'
             
         return JsonResponse({
             'status': status,
