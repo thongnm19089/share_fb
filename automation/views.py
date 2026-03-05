@@ -190,137 +190,52 @@ def add_page(request):
         return redirect('page_list')
     return render(request, 'automation/add_page.html')
 
-# Global in-memory store for scraping jobs
-# Format: { 'job_id': { 'status': 'running'|'completed'|'error', 'progress': 0..100, 'results': [], 'error': '' } }
-SCRAPE_JOBS = {}
-
-def run_scrape_job_thread(job_id, page_ids, account_cookies):
-    job = SCRAPE_JOBS[job_id]
-    total_pages = len(page_ids)
-    
-    try:
-        from django.db import connection, transaction
-        connection.close() # Ensure fresh connection
-        
-        scraper = HotPostScraper(headless=True)
-        # Update progress callback for scraper (we will pass a callable to the scraper to handle progress)
-        for idx, page_id in enumerate(page_ids):
-            # Update percentage per page
-            base_progress = int((idx / total_pages) * 100)
-            job['progress'] = base_progress
-            
-            try:
-                page = ObservedPage.objects.get(id=page_id)
-                page.scrape_status = 'running'
-                page.save()
-                
-                # Setup a callback internally to let scraper update progress finely
-                def progress_cb(pct):
-                    # pct is 0-100 for this specific page
-                    page_contribution = (pct / 100.0) * (100.0 / total_pages)
-                    job['progress'] = base_progress + int(page_contribution)
-
-                # Stop on existing entries (ordered by most recent)
-                existing_urls = list(HotPost.objects.filter(page=page).order_by('-posted_at').values_list('post_url', flat=True)[:100])
-                results = scraper.scrape_page(account_cookies, page.url, progress_callback=progress_cb, stop_urls=existing_urls, max_days=5, max_posts=50)
-                
-                # Update saving logic to prevent dropping existing data and use update_or_create instead
-                for p in results:
-                    p['page_name'] = page.name # attach page info for the frontend
-                    p['content_snippet'] = p.get('caption', '') # pass caption to frontend
-                    # Convert datetime to ISO string for JSON serialization
-                    if p.get('posted_at'):
-                        try:
-                            hot_post, created = HotPost.objects.update_or_create(
-                                page=page,
-                                post_url=p['post_url'],
-                                defaults={
-                                    'content_snippet': p['content_snippet'],
-                                    'posted_at': p['posted_at'],
-                                    'likes_count': p['likes'],
-                                    'comments_count': p['comments'],
-                                    'shares_count': p['shares']
-                                }
-                            )
-                        except Exception as save_err:
-                            print(f"Error saving hotpost: {save_err}")
-                            
-                        p['posted_at'] = p['posted_at'].isoformat()
-                    # Calculate total
-                    p['total_engagement'] = p['likes'] + p['comments'] + p['shares']
-                    job['results'].append(p)
-                    
-                page.scrape_status = 'completed'
-                page.last_scraped_at = timezone.now()
-                page.save()
-            except Exception as e:
-                print(f"Error scraping individual page {page_id}: {e}")
-                try:
-                    p_err = ObservedPage.objects.get(id=page_id)
-                    p_err.scrape_status = 'error'
-                    p_err.save()
-                except: pass
-
-        job['progress'] = 100
-        job['status'] = 'completed'
-    except Exception as e:
-        print(f"Scrape job error: {e}")
-        job['status'] = 'error'
-        job['error'] = str(e)
-
 @login_required
 def api_start_scrape(request):
-    account = FacebookAccount.objects.filter(status='live', user=request.user).first()
-    if not account:
-        return JsonResponse({'status': 'error', 'message': 'Cần ít nhất 1 tài khoản FB Live để cào dữ liệu!'}, status=400)
-    
-    page_id_to_scrape = request.GET.get('page_id')
-    pages_to_scrape = []
-    if page_id_to_scrape:
-        # verify page belongs to user
-        page_obj = ObservedPage.objects.filter(id=int(page_id_to_scrape), user=request.user).first()
-        if page_obj:
-            pages_to_scrape = [page_obj.id]
-    else:
-        pages_to_scrape = list(ObservedPage.objects.filter(user=request.user).values_list('id', flat=True))
-        
-    if not pages_to_scrape:
-        return JsonResponse({'status': 'error', 'message': 'Không có Page nào thuộc sở hữu của bạn!'}, status=400)
-        
-    job_id = str(uuid.uuid4())
-    SCRAPE_JOBS[job_id] = {
-        'status': 'running',
-        'progress': 0,
-        'results': [],
-        'error': ''
-    }
-    
-    thread = threading.Thread(target=run_scrape_job_thread, args=(job_id, pages_to_scrape, account.cookies))
-    thread.daemon = True
-    thread.start()
-    
-    return JsonResponse({'status': 'running', 'job_id': job_id})
+    try:
+        pages = ObservedPage.objects.filter(user=request.user, is_auto_scan=True)
+        if not pages.exists():
+            return JsonResponse({'status': 'error', 'message': 'Không có Fanpage nào được bật [Tự động quét]. Vui lòng chỉnh sửa Fanpage và bật lên.'})
+            
+        account = FacebookAccount.objects.filter(user=request.user, status='live').first()
+        if not account:
+            return JsonResponse({'status': 'error', 'message': 'Không có tài khoản Facebook Live nào để quét.'})
+
+        # Đánh dấu các page là đang running/queued
+        for p in pages:
+            p.scrape_status = 'running'
+            p.save()
+            scrape_page_background_task(p.id, request.user.id)
+            
+        return JsonResponse({'status': 'success', 'job_id': 'global'})
+            
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required
 def api_scrape_status(request, job_id):
-    if job_id not in SCRAPE_JOBS:
-        return JsonResponse({'status': 'error', 'message': 'Invalid Job ID'}, status=404)
-        
-    job = SCRAPE_JOBS[job_id]
-    
-    response_data = {
-        'status': job['status'],
-        'progress': job['progress'],
-    }
-    
-    if job['status'] in ('completed', 'error'):
-        if job['status'] == 'completed':
-            sorted_results = sorted(job['results'], key=lambda x: x.get('total_engagement', 0), reverse=True)
-            response_data['results'] = sorted_results
-        else:
-            response_data['error'] = job['error']
+    # Tính % tiến độ dựa trên scrape_status trong Database
+    try:
+        pages = ObservedPage.objects.filter(user=request.user, is_auto_scan=True)
+        total_pages = pages.count()
+        if total_pages == 0:
+            return JsonResponse({'status': 'completed', 'progress': 100})
             
-    return JsonResponse(response_data)
+        pages_done = pages.exclude(scrape_status='running').count()
+        progress = int((pages_done / total_pages) * 100)
+        
+        status = 'running'
+        if pages_done == total_pages:
+            status = 'completed'
+            
+        return JsonResponse({
+            'status': status,
+            'progress': progress,
+            'total_pages': total_pages,
+            'pages_done': pages_done
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'error': str(e)})
 
 @login_required
 def scrape_page_view(request, page_id):
@@ -333,8 +248,10 @@ def scrape_all_pages_view(request):
 @login_required
 def hot_post_list(request):
     latest_page = ObservedPage.objects.order_by('-last_scraped_at').first()
+    is_scraping_active = ObservedPage.objects.filter(user=request.user, scrape_status__in=['queued', 'running']).exists()
     context = {
-        'latest_scraped_at': latest_page.last_scraped_at if latest_page else None
+        'latest_scraped_at': latest_page.last_scraped_at if latest_page else None,
+        'is_scraping_active': is_scraping_active
     }
     return render(request, 'automation/hot_post_list.html', context)
 

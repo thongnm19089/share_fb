@@ -33,16 +33,12 @@ class Command(BaseCommand):
                 if page.auto_scan_time:
                     # Chạy theo giờ người dùng thiết lập trên giao diện
                     if now.time() >= page.auto_scan_time:
-                        if not last_scraped or last_scraped.date() < now.date():
+                        if not last_scraped or (now - last_scraped).total_seconds() > 3000:
                             should_scan = True
                 else:
-                    # Mặc định: 00:00 và 12:00
-                    if now.hour >= 12:
-                        if not last_scraped or last_scraped.date() < now.date() or (last_scraped.date() == now.date() and last_scraped.hour < 12):
-                            should_scan = True
-                    else: # Từ 00:00 đến 11:59
-                        if not last_scraped or last_scraped.date() < now.date():
-                            should_scan = True
+                    # Chạy 3000 giây (50 phút) một lần để hỗ trợ quét hàng giờ
+                    if not last_scraped or (now - last_scraped).total_seconds() > 3000:
+                        should_scan = True
                             
                 if should_scan:
                     page_ids.append(page.id)

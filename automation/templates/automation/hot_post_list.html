@@ -53,133 +53,139 @@
         const emptyState = document.getElementById('empty-state');
 
         let pollInterval;
+        let isScrapingActive = {% if is_scraping_active %}true{% else %}false{% endif %};
 
-        btnScrapeAll.addEventListener('click', function () {
-            if (!confirm('Bắt đầu quét TẤT CẢ các Pages (có bật Tự động Quét)? Dữ liệu sẽ lưu vào DB.')) return;
+    // Restore progress on page load if active
+    if (isScrapingActive) {
+        btnScrapeAll.disabled = true;
+        progressWrapper.classList.remove('d-none');
+        checkStatus('global'); // Fetch initial progress right away
+        pollInterval = setInterval(() => checkStatus('global'), 2000);
+    }
 
-            btnScrapeAll.disabled = true;
-            // Optionally clear old data before running new scan to avoid duplicates being shown right away
-            // postsContainer.innerHTML = ''; 
-            progressWrapper.classList.remove('d-none');
-            updateProgress(0);
+    btnScrapeAll.addEventListener('click', function () {
+        if (!confirm('Bắt đầu quét TẤT CẢ các Pages (có bật Tự động Quét)? Dữ liệu sẽ lưu vào DB.')) return;
 
-            fetch("{% url 'api_start_scrape' %}")
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'error') {
-                        alert(data.message);
-                        resetUI();
-                        return;
-                    }
+        btnScrapeAll.disabled = true;
+        progressWrapper.classList.remove('d-none');
+        updateProgress(0);
 
-                    const jobId = data.job_id;
-                    // Start polling every 2 seconds
-                    pollInterval = setInterval(() => checkStatus(jobId), 2000);
-                })
-                .catch(err => {
-                    alert("Lỗi khi gọi API: " + err);
+        fetch("{% url 'api_start_scrape' %}")
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    alert(data.message);
                     resetUI();
-                });
-        });
+                    return;
+                }
 
-        function checkStatus(jobId) {
-            fetch(`/api/scrape/status/${jobId}/`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'error') {
-                        alert("Lỗi trong quá trình quét: " + (data.error || data.message));
-                        clearInterval(pollInterval);
-                        resetUI();
-                        return;
-                    }
+                // Start polling immediately with the static 'global' DB job ID
+                pollInterval = setInterval(() => checkStatus('global'), 2000);
+            })
+            .catch(err => {
+                alert("Lỗi khi gọi API: " + err);
+                resetUI();
+            });
+    });
 
-                    updateProgress(data.progress);
+    function checkStatus(jobId) {
+        fetch(`/api/scrape/status/${jobId}/`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    alert("Lỗi trong quá trình quét: " + (data.error || data.message));
+                    clearInterval(pollInterval);
+                    resetUI();
+                    return;
+                }
 
-                    if (data.status === 'completed') {
-                        clearInterval(pollInterval);
-                        setTimeout(() => {
-                            progressWrapper.classList.add('d-none');
-                            btnScrapeAll.disabled = false;
-                            // Reset và tải lại danh sách từ DB (tự động hiển thị sau quét)
-                            currentPage = 1;
-                            hasMore = true;
-                            lastRenderedDate = null;
-                            postsContainer.innerHTML = '';
-                            loadHistoryPosts();
-                        }, 500);
-                    }
-                })
-                .catch(err => console.error(err));
-        }
+                updateProgress(data.progress);
 
-        function updateProgress(pct) {
-            progressBar.style.width = pct + '%';
-            progressBar.setAttribute('aria-valuenow', pct);
-            progressPercent.textContent = pct;
-        }
+                if (data.status === 'completed') {
+                    clearInterval(pollInterval);
+                    setTimeout(() => {
+                        progressWrapper.classList.add('d-none');
+                        btnScrapeAll.disabled = false;
+                        // Reset và tải lại danh sách từ DB (tự động hiển thị sau quét)
+                        currentPage = 1;
+                        hasMore = true;
+                        lastRenderedDate = null;
+                        postsContainer.innerHTML = '';
+                        loadHistoryPosts();
+                    }, 500);
+                }
+            })
+            .catch(err => console.error(err));
+    }
 
-        function resetUI() {
-            btnScrapeAll.disabled = false;
-            progressWrapper.classList.add('d-none');
-        }
+    function updateProgress(pct) {
+        progressBar.style.width = pct + '%';
+        progressBar.setAttribute('aria-valuenow', pct);
+        progressPercent.textContent = pct;
+    }
 
-        function formatRelativeTime(dateString) {
-            if (!dateString) return 'N/A';
-            const postDate = new Date(dateString);
-            const now = new Date();
+    function resetUI() {
+        btnScrapeAll.disabled = false;
+        progressWrapper.classList.add('d-none');
+    }
 
-            const hours = postDate.getHours().toString().padStart(2, '0');
-            const minutes = postDate.getMinutes().toString().padStart(2, '0');
-            let timeStr = `${hours}:${minutes}`;
+    function formatRelativeTime(dateString) {
+        if (!dateString) return 'N/A';
+        const postDate = new Date(dateString);
+        const now = new Date();
 
-            const isToday = postDate.getDate() === now.getDate() &&
-                postDate.getMonth() === now.getMonth() &&
-                postDate.getFullYear() === now.getFullYear();
+        const hours = postDate.getHours().toString().padStart(2, '0');
+        const minutes = postDate.getMinutes().toString().padStart(2, '0');
+        let timeStr = `${hours}:${minutes}`;
 
-            if (isToday) {
-                const diffMs = now - postDate;
-                const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+        const isToday = postDate.getDate() === now.getDate() &&
+            postDate.getMonth() === now.getMonth() &&
+            postDate.getFullYear() === now.getFullYear();
 
-                if (diffHrs > 0) {
-                    timeStr += ` (${diffHrs} giờ trước)`;
+        if (isToday) {
+            const diffMs = now - postDate;
+            const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+
+            if (diffHrs > 0) {
+                timeStr += ` (${diffHrs} giờ trước)`;
+            } else {
+                const diffMins = Math.floor(diffMs / (1000 * 60));
+                if (diffMins > 0) {
+                    timeStr += ` (${diffMins} phút trước)`;
                 } else {
-                    const diffMins = Math.floor(diffMs / (1000 * 60));
-                    if (diffMins > 0) {
-                        timeStr += ` (${diffMins} phút trước)`;
-                    } else {
-                        timeStr += ` (Vừa xong)`;
-                    }
+                    timeStr += ` (Vừa xong)`;
                 }
             }
-            return timeStr;
         }
+        return timeStr;
+    }
 
-        let lastRenderedDate = null; // Dùng để theo dõi dải phân cách ngày
+    let lastRenderedDate = null; // Dùng để theo dõi dải phân cách ngày
 
-        function appendPosts(results) {
-            if (!results || results.length === 0) {
-                if (postsContainer.innerHTML.trim() === '') {
-                    postsContainer.innerHTML = `
+    function appendPosts(results) {
+        if (!results || results.length === 0) {
+            if (postsContainer.innerHTML.trim() === '') {
+                postsContainer.innerHTML = `
                     <div class="col-12 text-center py-5 text-muted w-100">
                         <h4>Không có bài viết nào trong Lịch sử</h4>
                     </div>`;
-                }
-                return;
             }
+            return;
+        }
 
-            let html = '';
-            results.forEach(post => {
-                const timeStr = formatRelativeTime(post.posted_at);
+        let html = '';
+        results.forEach(post => {
+            const timeStr = formatRelativeTime(post.posted_at);
 
-                // Grouping by Date logic
-                const currentDateGroup = post.post_date || 'Unknown Date';
-                if (currentDateGroup !== lastRenderedDate) {
-                    lastRenderedDate = currentDateGroup;
-                    let displayDate = currentDateGroup;
-                    if (currentDateGroup === new Date().toISOString().split('T')[0]) {
-                        displayDate = "Ngày Hôm Nay";
-                    }
-                    html += `
+            // Grouping by Date logic
+            const currentDateGroup = post.post_date || 'Unknown Date';
+            if (currentDateGroup !== lastRenderedDate) {
+                lastRenderedDate = currentDateGroup;
+                let displayDate = currentDateGroup;
+                if (currentDateGroup === new Date().toISOString().split('T')[0]) {
+                    displayDate = "Ngày Hôm Nay";
+                }
+                html += `
                     <div class="col-12 mt-4 mb-3">
                         <div class="d-flex align-items-center">
                             <hr class="flex-grow-1 border-primary opacity-25">
@@ -187,12 +193,12 @@
                             <hr class="flex-grow-1 border-primary opacity-25">
                         </div>
                     </div>`;
-                }
+            }
 
-                const borderClass = post.total_engagement > 100 ? 'success' : 'secondary';
-                const defaultSnippet = "[Không có nội dung text]";
+            const borderClass = post.total_engagement > 100 ? 'success' : 'secondary';
+            const defaultSnippet = "[Không có nội dung text]";
 
-                html += `
+            html += `
             <div class="col-6 col-md-4 col-xl-3 mb-2">
                 <div class="card h-100 shadow-sm border-${borderClass}" style="background:#f8f9fa;">
                     <div class="card-header bg-white py-1 px-2">
@@ -226,94 +232,94 @@
                     </div>
                 </div>
             </div>`;
-            });
-
-            postsContainer.insertAdjacentHTML('beforeend', html);
-        }
-
-        // Logic for infinite scrolling / load more historic posts
-        let currentPage = 1;
-        let isLoading = false;
-        let hasMore = true;
-        const btnLoadMore = document.getElementById('btn-load-more');
-
-        let currentSort = 'time';
-        const sortSelect = document.getElementById('sort-select');
-
-        sortSelect.addEventListener('change', function () {
-            currentSort = this.value;
-            currentPage = 1;
-            hasMore = true;
-            lastRenderedDate = null;
-            postsContainer.innerHTML = ''; // Reset ui
-            loadHistoryPosts();
         });
 
-        function loadHistoryPosts() {
-            if (isLoading || !hasMore) return;
-            isLoading = true;
-            btnLoadMore.classList.remove('d-none');
-            btnLoadMore.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang tải...';
+        postsContainer.insertAdjacentHTML('beforeend', html);
+    }
 
-            fetch(`/api/posts/?page=${currentPage}&sort=${currentSort}`)
-                .then(res => res.json())
-                .then(data => {
-                    isLoading = false;
-                    if (data.status === 'ok') {
-                        appendPosts(data.results);
-                        hasMore = data.has_next;
-                        if (hasMore) {
-                            currentPage++;
-                            btnLoadMore.textContent = "Tải thêm bài viết ▼";
-                            // Nếu màn hình lớn, scroll-detector đã trong viewport → auto load tiếp
-                            setTimeout(() => {
-                                const rect = document.getElementById('scroll-detector').getBoundingClientRect();
-                                if (rect.top < window.innerHeight && hasMore && !isLoading) {
-                                    loadHistoryPosts();
-                                }
-                            }, 150);
-                        } else {
-                            btnLoadMore.classList.add('d-none');
-                        }
+    // Logic for infinite scrolling / load more historic posts
+    let currentPage = 1;
+    let isLoading = false;
+    let hasMore = true;
+    const btnLoadMore = document.getElementById('btn-load-more');
+
+    let currentSort = 'time';
+    const sortSelect = document.getElementById('sort-select');
+
+    sortSelect.addEventListener('change', function () {
+        currentSort = this.value;
+        currentPage = 1;
+        hasMore = true;
+        lastRenderedDate = null;
+        postsContainer.innerHTML = ''; // Reset ui
+        loadHistoryPosts();
+    });
+
+    function loadHistoryPosts() {
+        if (isLoading || !hasMore) return;
+        isLoading = true;
+        btnLoadMore.classList.remove('d-none');
+        btnLoadMore.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang tải...';
+
+        fetch(`/api/posts/?page=${currentPage}&sort=${currentSort}`)
+            .then(res => res.json())
+            .then(data => {
+                isLoading = false;
+                if (data.status === 'ok') {
+                    appendPosts(data.results);
+                    hasMore = data.has_next;
+                    if (hasMore) {
+                        currentPage++;
+                        btnLoadMore.textContent = "Tải thêm bài viết ▼";
+                        // Nếu màn hình lớn, scroll-detector đã trong viewport → auto load tiếp
+                        setTimeout(() => {
+                            const rect = document.getElementById('scroll-detector').getBoundingClientRect();
+                            if (rect.top < window.innerHeight && hasMore && !isLoading) {
+                                loadHistoryPosts();
+                            }
+                        }, 150);
+                    } else {
+                        btnLoadMore.classList.add('d-none');
                     }
-                })
-                .catch(err => {
-                    isLoading = false;
-                    console.error("Lỗi tải lịch sử:", err);
-                });
-        }
-
-        // Click button để load thêm (dành cho màn hình lớn)
-        btnLoadMore.addEventListener('click', () => {
-            if (!isLoading && hasMore) loadHistoryPosts();
-        });
-
-        // Set up IntersectionObserver for Infinite Scrolling
-        const observerOptions = {
-            root: null,          // viewport - body scroll tự nhiên
-            rootMargin: '400px',
-            threshold: 0
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting && hasMore && !isLoading) {
-                    loadHistoryPosts();
                 }
+            })
+            .catch(err => {
+                isLoading = false;
+                console.error("Lỗi tải lịch sử:", err);
             });
-        }, observerOptions);
+    }
 
-        observer.observe(document.getElementById('scroll-detector'));
+    // Click button để load thêm (dành cho màn hình lớn)
+    btnLoadMore.addEventListener('click', () => {
+        if (!isLoading && hasMore) loadHistoryPosts();
+    });
 
-        // Fallback window scroll
-        window.addEventListener('scroll', function () {
-            if (!hasMore || isLoading) return;
-            if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 300) {
+    // Set up IntersectionObserver for Infinite Scrolling
+    const observerOptions = {
+        root: null,          // viewport - body scroll tự nhiên
+        rootMargin: '400px',
+        threshold: 0
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && hasMore && !isLoading) {
                 loadHistoryPosts();
             }
         });
+    }, observerOptions);
 
-        loadHistoryPosts();
+    observer.observe(document.getElementById('scroll-detector'));
+
+    // Fallback window scroll
+    window.addEventListener('scroll', function () {
+        if (!hasMore || isLoading) return;
+        if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 300) {
+            loadHistoryPosts();
+        }
+    });
+
+    loadHistoryPosts();
     });
 </script>
 {% endblock %}
