@@ -527,7 +527,11 @@ class HotPostScraper:
                     '--disable-notifications', 
                     '--no-sandbox', 
                     '--disable-dev-shm-usage',
-                    '--disable-blink-features=AutomationControlled' # Chống detect bot
+                    '--disable-blink-features=AutomationControlled', # Chống detect bot
+                    '--disable-gpu',
+                    '--disable-software-rasterizer',
+                    '--disable-extensions',
+                    '--js-flags="--max-old-space-size=256"'
                 ],
                 user_agent=(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
