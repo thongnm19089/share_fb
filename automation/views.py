@@ -202,11 +202,18 @@ def api_start_scrape(request):
             return JsonResponse({'status': 'error', 'message': 'Không có tài khoản Facebook Live nào để quét.'})
 
         # Dùng 'queued' để phân biệt: "đã đưa vào queue nhưng chưa bắt đầu"
+        # Chỉ xếp hàng cho các page chưa ở trạng thái queued hoặc running
+        count_enqueued = 0
         for p in pages:
-            p.scrape_status = 'queued'
-            p.save()
-            scrape_page_background_task(p.id, request.user.id)
+            if p.scrape_status not in ['queued', 'running']:
+                p.scrape_status = 'queued'
+                p.save()
+                scrape_page_background_task(p.id, request.user.id)
+                count_enqueued += 1
             
+        if count_enqueued == 0:
+            return JsonResponse({'status': 'success', 'message': 'Các Fanpage đã nằm trong hàng đợi hoặc đang quét rồi.', 'job_id': 'global'})
+
         return JsonResponse({'status': 'success', 'job_id': 'global'})
             
     except Exception as e:

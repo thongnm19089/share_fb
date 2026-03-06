@@ -27,6 +27,9 @@ class Command(BaseCommand):
             
             page_ids = []
             for page in pages:
+                if page.scrape_status in ['queued', 'running']:
+                    continue
+                    
                 should_scan = False
                 last_scraped = timezone.localtime(page.last_scraped_at) if page.last_scraped_at else None
                 
