@@ -348,6 +348,30 @@ def task_manager(request):
                 messages.success(request, f"Đã lên lịch quét toàn bộ hệ thống thành công!")
             except Exception as e:
                 messages.error(request, f"Lỗi tạo Job: {str(e)}")
+                
+        elif action == 'delete_task':
+            task_id = request.POST.get('task_id')
+            if task_id:
+                try:
+                    Task.objects.filter(id=task_id).delete()
+                    messages.success(request, f"Đã xóa Task #{task_id} thành công!")
+                except Exception as e:
+                    messages.error(request, f"Lỗi xóa Task: {str(e)}")
+                    
+        elif action == 'update_task':
+            task_id = request.POST.get('task_id')
+            update_time = request.POST.get('update_schedule_time')
+            if task_id and update_time:
+                try:
+                    task = Task.objects.get(id=task_id)
+                    run_at = timezone.datetime.fromisoformat(update_time)
+                    if timezone.is_naive(run_at):
+                        run_at = timezone.make_aware(run_at)
+                    task.run_at = run_at
+                    task.save()
+                    messages.success(request, f"Đã cập nhật giờ chạy cho Task #{task_id} thành công!")
+                except Exception as e:
+                    messages.error(request, f"Lỗi cập nhật Task: {str(e)}")
         
         return redirect('task_manager')
 

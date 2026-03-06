@@ -78,6 +78,7 @@
                             <th scope="col">ID</th>
                             <th scope="col">Tên Task</th>
                             <th scope="col">Hẹn Giờ Chạy</th>
+                            <th scope="col" class="text-end">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -86,6 +87,56 @@
                             <td>#{{ task.id }}</td>
                             <td><span class="badge bg-secondary">{{ task.task_name|slice:"-25:" }}</span></td>
                             <td><span class="text-danger fw-bold">{{ task.run_at|date:"d/m/Y H:i:s" }}</span></td>
+                            <td class="text-end">
+                                <!-- Nút Sửa -->
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                    data-bs-target="#updateTaskModal{{ task.id }}" title="Chỉnh sửa giờ chạy">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <!-- Form Xóa -->
+                                <form method="POST" action="{% url 'task_manager' %}" class="d-inline"
+                                    onsubmit="return confirm('Bạn có chắc chắn muốn XÓA TÁC VỤ này vĩnh viễn không?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_task">
+                                    <input type="hidden" name="task_id" value="{{ task.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        title="Hủy bỏ/Xóa tác vụ">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+
+                                <!-- Modal Sửa Giờ -->
+                                <div class="modal fade" id="updateTaskModal{{ task.id }}" tabindex="-1"
+                                    aria-hidden="true">
+                                    <div class="modal-dialog text-start">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Sửa Giờ Chạy (Task #{{ task.id }})</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                            </div>
+                                            <form method="POST" action="{% url 'task_manager' %}">
+                                                {% csrf_token %}
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="action" value="update_task">
+                                                    <input type="hidden" name="task_id" value="{{ task.id }}">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Giờ Chạy Mới</label>
+                                                        <input type="datetime-local" class="form-control"
+                                                            name="update_schedule_time"
+                                                            value="{{ task.run_at|date:'Y-m-d\TH:i' }}" required>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary"
+                                                        data-bs-dismiss="modal">Đóng</button>
+                                                    <button type="submit" class="btn btn-primary">Lưu Thay Đổi</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -118,7 +169,8 @@
                         {% for c_task in completed_tasks %}
                         <tr>
                             <td><span class="text-muted">#{{ c_task.id }}</span></td>
-                            <td><span class="text-success"><i class="fas fa-check me-1"></i> {{ c_task.run_at|date:"d/m/Y H:i" }}</span></td>
+                            <td><span class="text-success"><i class="fas fa-check me-1"></i> {{
+                                    c_task.run_at|date:"d/m/Y H:i" }}</span></td>
                         </tr>
                         {% empty %}
                         <tr>
