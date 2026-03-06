@@ -24,6 +24,12 @@ class Command(BaseCommand):
             if not pages.exists():
                 self.stdout.write(f"User {user.username} - Bỏ qua (không có page nào Tự Động Quét).")
                 continue
+                
+            # KIỂM TRA: Nếu user đang có bất kỳ page nào đang quét (thủ công hoặc auto), bỏ qua toàn bộ auto scan cycle này
+            has_active_scrapes = ObservedPage.objects.filter(user=user, scrape_status__in=['queued', 'running']).exists()
+            if has_active_scrapes:
+                self.stdout.write(f"User {user.username} - Bỏ qua (Đang có tiến trình quét đang diễn ra).")
+                continue
             
             page_ids = []
             for page in pages:
