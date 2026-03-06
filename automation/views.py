@@ -359,7 +359,7 @@ def task_manager(request):
                     try:
                         run_at = timezone.datetime.fromisoformat(schedule_time)
                         if timezone.is_naive(run_at):
-                            run_at = timezone.make_aware(run_at)
+                            run_at = timezone.make_aware(run_at, timezone.get_current_timezone())
                     except ValueError:
                         pass
                 
@@ -392,7 +392,7 @@ def task_manager(request):
                     task = Task.objects.get(id=task_id)
                     run_at = timezone.datetime.fromisoformat(update_time)
                     if timezone.is_naive(run_at):
-                        run_at = timezone.make_aware(run_at)
+                        run_at = timezone.make_aware(run_at, timezone.get_current_timezone())
                     task.run_at = run_at
                     
                     if update_repeat and update_repeat.isdigit():
