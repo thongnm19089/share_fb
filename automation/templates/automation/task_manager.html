@@ -59,8 +59,18 @@
                         </select>
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100">
+                    <button type="submit" class="btn btn-success w-100 mb-2">
                         <i class="fas fa-rocket me-2"></i> Lên lịch Quét Toàn Bộ (Queue Master Task)
+                    </button>
+                </form>
+
+                <hr class="text-muted">
+                <form method="POST" action="{% url 'task_manager' %}" class="mt-2"
+                    onsubmit="return confirm('CẢNH BÁO: Hành động này sẽ TẮT MỌI TIẾN TRÌNH QUÉT ĐANG CHẠY ngay lập tức và CÓ THỂ MẤT DỮ LIỆU CỦA PAGE ĐANG QUÉT DỞ DANG. Bạn có thực sự muốn DỪNG TẤT CẢ không?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="cancel_all_active">
+                    <button type="submit" class="btn btn-danger w-100 font-monospace">
+                        <i class="fas fa-ban me-2"></i> (PANIC) DỪNG KHẨN CẤP MỌI TIẾN TRÌNH
                     </button>
                 </form>
             </div>

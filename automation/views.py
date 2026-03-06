@@ -379,6 +379,23 @@ def task_manager(request):
                     messages.success(request, f"Đã cập nhật cấu hình cho Task #{task_id} thành công!")
                 except Exception as e:
                     messages.error(request, f"Lỗi cập nhật Task: {str(e)}")
+                    
+        elif action == 'cancel_all_active':
+            try:
+                import subprocess
+                # 1. Đưa các page đang treo về trạng thái lỗi/hủy
+                ObservedPage.objects.filter(scrape_status__in=['queued', 'running']).update(scrape_status='error')
+                
+                # 2. Xóa trắng hàng đợi Background Tasks
+                Task.objects.all().delete()
+                
+                # 3. Ép đóng (Kill) worker đang bị kẹt cùng với các tab Chrome ngầm, sau đó khởi động lại worker
+                cmd = "pkill -9 -f 'manage.py process_tasks'; pkill -9 -f 'chrome-headless'; pkill -9 -f 'playwright'; sleep 1; nohup /root/app/share_fb/venv/bin/python /root/app/share_fb/manage.py process_tasks > /var/log/process_tasks.log 2>&1 &"
+                subprocess.Popen(cmd, shell=True, executable='/bin/bash')
+                
+                messages.success(request, "Đã DỪNG KHẨN CẤP toàn bộ tiến trình quét đang chạy và làm mới hàng đợi!")
+            except Exception as e:
+                messages.error(request, f"Lỗi khi hủy tiến trình: {str(e)}")
         
         return redirect('task_manager')
 
