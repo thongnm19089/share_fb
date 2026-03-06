@@ -102,7 +102,7 @@
     }
 
     btnScrapeAll.addEventListener('click', function () {
-        if (!confirm('Bắt đầu quét TẤT CẢ các Pages (có bật Tự động Quét)? Dữ liệu sẽ lưu vào DB.')) return;
+        if (!confirm('Bắt đầu quét TẤT CẢ các Pages? Dữ liệu sẽ lưu vào DB.')) return;
 
         btnScrapeAll.disabled = true;
         progressWrapper.classList.remove('d-none');
@@ -116,8 +116,7 @@
                     resetUI();
                     return;
                 }
-
-                // Start polling immediately with the static 'global' DB job ID
+                // 'success' hoặc 'already_running' → đều bắt đầu poll
                 pollInterval = setInterval(() => checkStatus('global'), 2000);
             })
             .catch(err => {

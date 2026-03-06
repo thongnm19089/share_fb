@@ -196,26 +196,23 @@ def api_start_scrape(request):
         pages = ObservedPage.objects.filter(user=request.user)
         if not pages.exists():
             return JsonResponse({'status': 'error', 'message': 'Không có Fanpage nào để quét. Vui lòng thêm Fanpage trước.'})
-            
+
         account = FacebookAccount.objects.filter(user=request.user, status='live').first()
         if not account:
             return JsonResponse({'status': 'error', 'message': 'Không có tài khoản Facebook Live nào để quét.'})
 
-        # Dùng 'queued' để phân biệt: "đã đưa vào queue nhưng chưa bắt đầu"
-        # Chỉ xếp hàng cho các page chưa ở trạng thái queued hoặc running
-        count_enqueued = 0
+        # Nếu đang có bất kỳ page nào đang xử lý, từ chối yêu cầu mới
+        if pages.filter(scrape_status__in=['queued', 'running']).exists():
+            return JsonResponse({'status': 'already_running', 'message': 'Đang có tiến trình quét diễn ra. Vui lòng chờ hoặc hủy trước khi chạy lại.', 'job_id': 'global'})
+
+        # Đưa TẤT CẢ page vào hàng đợi
         for p in pages:
-            if p.scrape_status not in ['queued', 'running']:
-                p.scrape_status = 'queued'
-                p.save()
-                scrape_page_background_task(p.id, request.user.id)
-                count_enqueued += 1
-            
-        if count_enqueued == 0:
-            return JsonResponse({'status': 'success', 'message': 'Các Fanpage đã nằm trong hàng đợi hoặc đang quét rồi.', 'job_id': 'global'})
+            p.scrape_status = 'queued'
+            p.save()
+            scrape_page_background_task(p.id, request.user.id)
 
         return JsonResponse({'status': 'success', 'job_id': 'global'})
-            
+
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
 

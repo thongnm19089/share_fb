@@ -12,7 +12,6 @@
                 <tr>
                     <th scope="col">ID</th>
                     <th scope="col">Tên / Link</th>
-                    <th scope="col">Cron / Giờ Quét</th>
                     <th scope="col">Trạng Thái (Real-time)</th>
                     <th>Last Scraped</th>
                     <th>Actions</th>
@@ -25,16 +24,6 @@
                     <td>
                         <strong>{{ page.name }}</strong><br>
                         <a href="{{ page.url }}" target="_blank" class="small text-muted">{{ page.url }}</a>
-                    </td>
-                    <td>
-                        {% if page.is_auto_scan %}
-                        <span class="badge bg-success">
-                            <i class="fas fa-clock"></i>
-                            {% if page.auto_scan_time %}{{ page.auto_scan_time|time:"H:i" }}{% else %}00:00 & 12:00{% endif %}
-                        </span>
-                        {% else %}
-                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Tắt</span>
-                        {% endif %}
                     </td>
                     <td>
                         {% if page.scrape_status == 'running' %}
