@@ -361,6 +361,7 @@ def task_manager(request):
         elif action == 'update_task':
             task_id = request.POST.get('task_id')
             update_time = request.POST.get('update_schedule_time')
+            update_repeat = request.POST.get('update_repeat_option')
             if task_id and update_time:
                 try:
                     task = Task.objects.get(id=task_id)
@@ -368,8 +369,14 @@ def task_manager(request):
                     if timezone.is_naive(run_at):
                         run_at = timezone.make_aware(run_at)
                     task.run_at = run_at
+                    
+                    if update_repeat and update_repeat.isdigit():
+                        task.repeat = int(update_repeat)
+                    else:
+                        task.repeat = Task.NEVER
+                        
                     task.save()
-                    messages.success(request, f"Đã cập nhật giờ chạy cho Task #{task_id} thành công!")
+                    messages.success(request, f"Đã cập nhật cấu hình cho Task #{task_id} thành công!")
                 except Exception as e:
                     messages.error(request, f"Lỗi cập nhật Task: {str(e)}")
         
