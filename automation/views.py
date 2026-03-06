@@ -245,6 +245,31 @@ def api_scrape_status(request, job_id):
         return JsonResponse({'status': 'error', 'error': str(e)})
 
 @login_required
+def api_cancel_scrape(request):
+    """
+    Hủy khẩn cấp toàn bộ các tiến trình quét đang chạy cho User hiện tại từ Dashboard.
+    """
+    if request.method == 'POST':
+        try:
+            import subprocess
+            user_pages = ObservedPage.objects.filter(user=request.user, scrape_status__in=['queued', 'running'])
+            if user_pages.exists():
+                user_pages.update(scrape_status='error')
+                
+                # Dọn dẹp background tasks queue
+                Task.objects.all().delete()
+                
+                # Ép đóng worker giống như ở Task Manager
+                cmd = "pkill -9 -f 'manage.py process_tasks'; pkill -9 -f 'chrome-headless'; pkill -9 -f 'playwright'; sleep 1; nohup /root/app/share_fb/venv/bin/python /root/app/share_fb/manage.py process_tasks > /var/log/process_tasks.log 2>&1 &"
+                subprocess.Popen(cmd, shell=True, executable='/bin/bash')
+                
+            return JsonResponse({'status': 'success', 'message': 'Đã hủy thành công tiến trình quét.'})
+        except Exception as e:
+            logger.error(f"Error canceling scrape: {e}")
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+@login_required
 def scrape_page_view(request, page_id):
     return redirect('hot_post_list')
 

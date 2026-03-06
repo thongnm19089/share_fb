@@ -21,6 +21,7 @@ urlpatterns = [
     
     # API Endpoints
     path('api/scrape/start/', views.api_start_scrape, name='api_start_scrape'),
+    path('api/scrape/cancel/', views.api_cancel_scrape, name='api_cancel_scrape'),
     path('api/scrape/status/<str:job_id>/', views.api_scrape_status, name='api_scrape_status'),
     path('api/posts/', views.api_get_posts, name='api_get_posts'),
 ]
