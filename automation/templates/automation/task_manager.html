@@ -142,24 +142,13 @@
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Lặp Lại (Repeat)</label>
                                                         <select class="form-select" name="update_repeat_option">
-                                                            <option value="" {% if task.repeat==0 %}selected{% endif %}>
-                                                                Không lặp lại (Chạy 1 lần)</option>
-                                                            <option value="1800" {% if task.repeat==1800 %}selected{%
-                                                                endif %}>Mỗi 30 Phút</option>
-                                                            <option value="3600" {% if task.repeat==3600 %}selected{%
-                                                                endif %}>Mỗi 1 Giờ</option>
-                                                            <option value="7200" {% if task.repeat==7200 %}selected{%
-                                                                endif %}>Mỗi 2 Giờ</option>
-                                                            <option value="10800" {% if task.repeat==10800 %}selected{%
-                                                                endif %}>Mỗi 3 Giờ</option>
-                                                            <option value="21600" {% if task.repeat==21600 %}selected{%
-                                                                endif %}>Mỗi 6 Giờ</option>
-                                                            <option value="43200" {% if task.repeat==43200 %}selected{%
-                                                                endif %}>Mỗi 12 Giờ</option>
-                                                            <option value="86400" {% if task.repeat==86400 %}selected{%
-                                                                endif %}>Mỗi 1 Ngày</option>
-                                                            <option value="172800" {% if task.repeat==172800
-                                                                %}selected{% endif %}>Mỗi 2 Ngày</option>
+                                                            {% for val, label in repeat_choices %}
+                                                            {% if task.repeat == val %}
+                                                            <option value="{{ val }}" selected>{{ label }}</option>
+                                                            {% else %}
+                                                            <option value="{{ val }}">{{ label }}</option>
+                                                            {% endif %}
+                                                            {% endfor %}
                                                         </select>
                                                     </div>
                                                 </div>

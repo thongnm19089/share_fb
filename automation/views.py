@@ -425,17 +425,29 @@ def task_manager(request):
         return redirect('task_manager')
 
     user_pages = ObservedPage.objects.filter(user=request.user).order_by('name')
-    
     pending_tasks = Task.objects.all().order_by('run_at')
     completed_tasks = CompletedTask.objects.all().order_by('-run_at')[:20]
     
     # Get local aware server time and convert to Javascript-friendly ISO format
     server_time = timezone.localtime(timezone.now())
     
+    repeat_choices = [
+        (0, 'Không lặp lại (Chạy 1 lần)'),
+        (1800, 'Mỗi 30 Phút'),
+        (3600, 'Mỗi 1 Giờ'),
+        (7200, 'Mỗi 2 Giờ'),
+        (10800, 'Mỗi 3 Giờ'),
+        (21600, 'Mỗi 6 Giờ'),
+        (43200, 'Mỗi 12 Giờ'),
+        (86400, 'Mỗi 1 Ngày'),
+        (172800, 'Mỗi 2 Ngày'),
+    ]
+    
     context = {
         'user_pages': user_pages,
         'pending_tasks': pending_tasks,
         'completed_tasks': completed_tasks,
-        'server_time_iso': server_time.isoformat()
+        'server_time_iso': server_time.isoformat(),
+        'repeat_choices': repeat_choices
     }
     return render(request, 'automation/task_manager.html', context)
