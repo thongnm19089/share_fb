@@ -486,6 +486,29 @@ class HotPostScraper:
             posted_at = timezone.now()
             time_raw = "Unknown (Fallback to now)"
 
+        # ── Video URL ─────────────────────────────────────────────────────────
+        video_url = None
+        try:
+            # Tìm tất cả thẻ <video> trong trang
+            video_els = page.locator("video").all()
+            best_url = None
+            for vel in video_els:
+                # Ưu tiên lấy src trực tiếp trên thẻ <video>
+                src = vel.get_attribute('src') or ''
+                if src and ('fbcdn.net' in src or 'facebook.com' in src or src.startswith('http')):
+                    best_url = src
+                    break
+                # Fallback: tìm trong thẻ <source> con
+                source_el = vel.locator('source').first
+                if source_el.count() > 0:
+                    s = source_el.get_attribute('src') or ''
+                    if s:
+                        best_url = s
+                        break
+            video_url = best_url
+        except Exception:
+            pass
+
         return {
             'posted_at': posted_at,
             'time_raw': time_raw,
@@ -493,6 +516,7 @@ class HotPostScraper:
             'likes': likes,
             'comments': comments,
             'shares': shares,
+            'video_url': video_url,
         }
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -525,7 +549,7 @@ class HotPostScraper:
                     '--disable-extensions',
                     '--js-flags=--max-old-space-size=512',  # Tăng lên 512MB vì RAM đã đủ 2GB
                     '--disable-background-networking',
-                    '--blink-settings=imagesEnabled=false',  # Tắt tải ảnh → tăng tốc, giảm RAM
+                    # Không tắt ảnh nữa - cần ảnh/video để extract video_url
                 ],
                 user_agent=(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '

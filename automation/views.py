@@ -326,11 +326,12 @@ def api_get_posts(request):
             'content_snippet': p.content_snippet,
             'post_url': p.post_url,
             'posted_at': p.posted_at.isoformat() if p.posted_at else None,
-            'post_date': date_str, # Ngày đã rút gọn để Frontend nhóm
+            'post_date': date_str,
             'likes': p.likes_count,
             'comments': p.comments_count,
             'shares': p.shares_count,
-            'total_engagement': p.total_engagement
+            'total_engagement': p.total_engagement,
+            'video_url': p.video_url or '',
         })
         
     return JsonResponse({

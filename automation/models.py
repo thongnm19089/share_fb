@@ -79,6 +79,7 @@ class HotPost(models.Model):
     likes_count = models.IntegerField(default=0)
     comments_count = models.IntegerField(default=0)
     shares_count = models.IntegerField(default=0)
+    video_url = models.TextField(blank=True, null=True, help_text="URL video trong bài viết (nếu có)")
     total_engagement = models.IntegerField(default=0, help_text="Tổng lượt tương tác (Like + Cmt + Share)")
     
     created_at = models.DateTimeField(auto_now_add=True)

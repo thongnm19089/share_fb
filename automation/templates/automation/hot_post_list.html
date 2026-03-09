@@ -294,6 +294,27 @@
                             style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.88rem;">
                             ${post.content_snippet || defaultSnippet}
                         </p>
+                        ${post.video_url ? `
+                        <div class="video-wrapper position-relative mb-1" style="background:#000; border-radius:6px; overflow:hidden;">
+                            <video class="w-100" style="max-height:160px; object-fit:cover; display:block; cursor:pointer;"
+                                src="${post.video_url}"
+                                preload="none"
+                                onclick="this.paused ? this.play() : this.pause()"
+                                muted playsinline>
+                            </video>
+                            <div class="video-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+                                style="background:rgba(0,0,0,0.25); pointer-events:none; transition:opacity 0.2s;"
+                                onclick="event.stopPropagation()">
+                                <i class="fas fa-play-circle text-white" style="font-size:2rem; opacity:0.85;"></i>
+                            </div>
+                            <a href="${post.video_url}" download 
+                                class="btn btn-dark btn-sm video-download-btn position-absolute bottom-0 end-0 m-1"
+                                style="opacity:0; transition:opacity 0.2s; font-size:0.7rem; z-index:5;"
+                                title="Tải xuống video"
+                                onclick="event.stopPropagation()">
+                                <i class="fas fa-download"></i> Tải về
+                            </a>
+                        </div>` : ''}
                         <div class="mt-auto" style="padding-bottom:2px;">
                         <hr class="my-1">
                         <div class="d-flex justify-content-between text-muted" style="font-size:0.8rem;">
@@ -394,6 +415,28 @@
     });
 
     loadHistoryPosts();
+
+    // Video: hover hiện nút Download + overlay play/pause
+    document.addEventListener('mouseover', e => {
+        const w = e.target.closest('.video-wrapper');
+        if (w) { const btn = w.querySelector('.video-download-btn'); if (btn) btn.style.opacity = '1'; }
+    });
+    document.addEventListener('mouseout', e => {
+        const w = e.target.closest('.video-wrapper');
+        if (w && !w.contains(e.relatedTarget)) { const btn = w.querySelector('.video-download-btn'); if (btn) btn.style.opacity = '0'; }
+    });
+    document.addEventListener('click', e => {
+        const video = e.target.closest('video');
+        if (video) {
+            const overlay = video.parentElement.querySelector('.video-overlay');
+            if (overlay) overlay.style.opacity = video.paused ? '1' : '0';
+        }
+    });
     });
 </script>
+<style>
+.video-wrapper:hover .video-download-btn { opacity: 1 !important; }
+.video-wrapper video { transition: filter 0.2s; }
+.video-wrapper:hover video { filter: brightness(0.92); }
+</style>
 {% endblock %}

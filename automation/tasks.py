@@ -90,7 +90,8 @@ def scrape_page_background_task(page_id, user_id):
                         'posted_at': p['posted_at'],
                         'likes_count': p['likes'],
                         'comments_count': p['comments'],
-                        'shares_count': p['shares']
+                        'shares_count': p['shares'],
+                        'video_url': p.get('video_url'),
                     }
                 )
             except Exception as e:
