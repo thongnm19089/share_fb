@@ -514,16 +514,18 @@ class HotPostScraper:
             # Khởi chạy một trình duyệt cố định thay vì incognito
             context = p.chromium.launch_persistent_context(
                 user_data_dir=user_data_dir,
-                headless=True,  # Chạy ẩn - bắt buộc trên server không có màn hình
+                headless=True,
                 args=[
-                    '--disable-notifications', 
-                    '--no-sandbox', 
+                    '--disable-notifications',
+                    '--no-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-blink-features=AutomationControlled', # Chống detect bot
+                    '--disable-blink-features=AutomationControlled',
                     '--disable-gpu',
                     '--disable-software-rasterizer',
                     '--disable-extensions',
-                    '--js-flags="--max-old-space-size=256"'
+                    '--js-flags=--max-old-space-size=256',
+                    '--single-process',           # Giảm zombie renderer trên server ít RAM
+                    '--disable-background-networking',
                 ],
                 user_agent=(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -533,6 +535,12 @@ class HotPostScraper:
                 viewport={'width': 1366, 'height': 900},
                 locale='vi-VN',
             )
+
+            # ── Đặt timeout TOÀN CỤC cho mọi hành động Playwright ──────────
+            # Mọi page.goto(), page.locator().all(), page.wait_for_selector()
+            # đều tự động abort sau 20 giây → không bao giờ bị block vô thời hạn
+            context.set_default_navigation_timeout(20_000)  # 20s cho navigation
+            context.set_default_timeout(10_000)             # 10s cho các selector
 
             # Vẫn nạp cookies dự phòng nếu có (tuỳ chọn vì profile đã lưu session)
             self._load_cookies(context, account_cookies)
@@ -591,13 +599,8 @@ class HotPostScraper:
                         time.sleep(2)
 
                     except PlaywrightTimeout:
-                        logger.warning(f"Timeout on {post_url}, skipping.")
-                        try:
-                            page.go_back(wait_until='domcontentloaded', timeout=10_000)
-                            time.sleep(1)
-                        except Exception:
-                            page.goto(page_url, wait_until='domcontentloaded', timeout=20_000)
-                            time.sleep(3)
+                        logger.warning(f"Timeout navigating {post_url}, skipping.")
+                        # Không cascade thêm goto() nữa - chỉ continue để tránh treo
                         continue
                     except Exception as e:
                         logger.warning(f"Error on {post_url}: {e}")
