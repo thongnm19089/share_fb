@@ -523,9 +523,9 @@ class HotPostScraper:
                     '--disable-gpu',
                     '--disable-software-rasterizer',
                     '--disable-extensions',
-                    '--js-flags=--max-old-space-size=256',
-                    '--single-process',           # Giảm zombie renderer trên server ít RAM
+                    '--js-flags=--max-old-space-size=512',  # Tăng lên 512MB vì RAM đã đủ 2GB
                     '--disable-background-networking',
+                    '--blink-settings=imagesEnabled=false',  # Tắt tải ảnh → tăng tốc, giảm RAM
                 ],
                 user_agent=(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -549,7 +549,7 @@ class HotPostScraper:
             try:
                 logger.info(f"Navigating to {page_url}")
                 page.goto(page_url, wait_until='domcontentloaded', timeout=30_000)
-                time.sleep(4)
+                time.sleep(2)  # Giảm từ 4s xuống 2s - đủ render JS cơ bản
 
                 # Đóng popup login nếu có
                 try:
@@ -577,7 +577,7 @@ class HotPostScraper:
                     try:
                         # Điều hướng đến link bài viết
                         page.goto(post_url, wait_until='domcontentloaded', timeout=20_000)
-                        time.sleep(3)
+                        time.sleep(1.5)  # Giảm từ 3s xuống 1.5s
 
                         post_data = self._parse_popup(page, known_posted_at=posted_at)
                         if not post_data:
@@ -596,7 +596,7 @@ class HotPostScraper:
 
                         # Quay lại trang fanpage
                         page.go_back(wait_until='domcontentloaded', timeout=15_000)
-                        time.sleep(2)
+                        time.sleep(1)  # Giảm từ 2s xuống 1s
 
                     except PlaywrightTimeout:
                         logger.warning(f"Timeout navigating {post_url}, skipping.")
