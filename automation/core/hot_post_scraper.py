@@ -604,22 +604,37 @@ class HotPostScraper:
                         time.sleep(1.5)
 
                         # ── Phát hiện trang lỗi của Facebook ─────────────────
-                        # Nếu Facebook trả về trang "Đã xảy ra lỗi" → bỏ qua
+                        # Nếu Facebook trả về trang lỗi → lưu bài với thông báo
+                        # để người dùng biết (thay vì bỏ qua hoàn toàn)
                         ERROR_INDICATORS = [
-                            "đã xảy ra lỗi",
-                            "something went wrong",
-                            "rất tiếc",
-                            "this content isn't available",
-                            "nội dung này không khả dụng",
-                            "page not found",
+                            ("đã xảy ra lỗi", "Facebook báo lỗi trang (cookie hết hạn?)"),
+                            ("something went wrong", "Facebook - Something went wrong"),
+                            ("rất tiếc",            "Facebook báo lỗi trang (cookie hết hạn?)"),
+                            ("this content isn't available", "Nội dung không khả dụng (bài bị xóa/ẩn)"),
+                            ("nội dung này không khả dụng", "Nội dung không khả dụng (bài bị xóa/ẩn)"),
+                            ("page not found",       "Trang không tìm thấy (404)"),
                         ]
+                        error_msg = None
                         try:
                             page_text_sample = page.locator('body').inner_text(timeout=3000)[:500].lower()
-                            if any(err in page_text_sample for err in ERROR_INDICATORS):
-                                logger.warning(f"Facebook error page detected for {post_url}, skipping.")
-                                continue
+                            for keyword, msg in ERROR_INDICATORS:
+                                if keyword in page_text_sample:
+                                    error_msg = msg
+                                    break
                         except Exception:
                             pass
+
+                        if error_msg:
+                            logger.warning(f"⚠️ Facebook error for {post_url}: {error_msg}")
+                            # Lưu bài với thông báo lỗi để hiển thị trong UI
+                            results.append({
+                                'post_url': post_url,
+                                'caption': f"⚠️ LỖI: {error_msg}",
+                                'posted_at': posted_at or __import__('django.utils.timezone', fromlist=['timezone']).timezone.now(),
+                                'likes': 0, 'comments': 0, 'shares': 0,
+                                'video_url': None,
+                            })
+                            continue
                         # ──────────────────────────────────────────────────────
 
                         post_data = self._parse_popup(page, known_posted_at=posted_at)
