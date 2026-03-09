@@ -30,6 +30,10 @@ ALLOWED_HOSTS = ['*']
 # Cho phép POST requests từ mọi IP/domain (bao gồm truy cập qua IP server)
 CSRF_TRUSTED_ORIGINS = ['http://*', 'https://*']
 
+# Redirect về dashboard sau khi đăng nhập/đăng xuất
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+
 
 # Application definition
 
