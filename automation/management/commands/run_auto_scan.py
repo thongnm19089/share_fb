@@ -22,11 +22,17 @@ class Command(BaseCommand):
                 self.stdout.write(f"User {user.username} - Bỏ qua (không có page nào).")
                 continue
 
-            # KIỂM TRA: Nếu user đang có bất kỳ page nào đang queued/running, bỏ qua hoàn toàn
+            # KIỂM TRA: Nếu user đang có bất kỳ page nào đang queued/running
             has_active = pages.filter(scrape_status__in=['queued', 'running']).exists()
             if has_active:
-                self.stdout.write(f"User {user.username} - Bỏ qua (đang có tiến trình quét diễn ra).")
-                continue
+                from background_task.models import Task
+                # Nếu không có background task nào đang chờ trong hệ thống, nghĩa là trạng thái kia bị kẹt
+                if Task.objects.count() == 0:
+                    self.stdout.write(f"User {user.username} - Phát hiện trạng thái bị kẹt, đang reset lại trạng thái.")
+                    pages.filter(scrape_status__in=['queued', 'running']).update(scrape_status='idle')
+                else:
+                    self.stdout.write(f"User {user.username} - Bỏ qua (đang có tiến trình quét diễn ra trong hàng đợi).")
+                    continue
 
             # Đưa TẤT CẢ page vào hàng đợi
             page_ids = list(pages.values_list('id', flat=True))

@@ -279,34 +279,23 @@ class HotPostScraper:
 
             logger.debug(f"Scroll {i+1}: total links={current_count}, old_streak={old_streak}")
 
-        all_links = list(post_links.keys())[:max_posts]
-        logger.info(f"Collected {len(all_links)} post links (limited to {max_posts}).")
-        return all_links
+        all_links_info = list(post_links.items())[:max_posts]
+        logger.info(f"Collected {len(all_links_info)} post links (limited to {max_posts}).")
+        return all_links_info
 
     # ──────────────────────────────────────────────────────────────────────────
     # STEP 2: Click từng link → mở popup → parse chi tiết
     # ──────────────────────────────────────────────────────────────────────────
-    def _parse_popup(self, page):
+    def _parse_popup(self, page, known_posted_at=None):
         """
-        Sau khi popup bài viết mở, đọc thông tin từ popup.
-        Trả về dict hoặc None.
-
-        Cấu trúc popup dựa trên ảnh người dùng gửi:
-        ┌─────────────────────────────────────────┐
-        │  [Avatar] Tên trang  ·  15 giờ  ·  🌐   │
-        │  Caption text...                         │
-        │  [Ảnh/Video]                             │
-        │  😍❤️ 1,2K          64 bình luận  130... │
-        │  [Thích] [Bình luận] [Chia sẻ]          │
-        └─────────────────────────────────────────┘
+        Đọc các thông tin (Thời gian, Reaction, Comment, Share, Đoạn text snippet).
         """
-        # Chờ popup load
+        # Popup load check (giảm timeout xuống để mượt hơn khi là trang web nguyên bản)
         POPUP_SELECTOR = "div[role='dialog'], div[data-pagelet='MediaViewerPhoto']"
         try:
-            page.wait_for_selector(POPUP_SELECTOR, timeout=8000)
-        except PlaywrightTimeout:
-            # Thử fallback: có thể navigate sang trang mới
-            logger.debug("Dialog not found, reading current page directly.")
+            page.wait_for_selector(POPUP_SELECTOR, timeout=2000)
+        except Exception:
+            pass
 
         # Lấy container chính của popup
         dialog = page.locator("div[role='dialog']")
@@ -314,7 +303,7 @@ class HotPostScraper:
             # Không có dialog, đọc từ toàn trang (đã navigate)
             dialog = page.locator("body")
 
-        posted_at = None
+        posted_at = known_posted_at
         time_raw = ""
         caption = ""
         likes = 0
@@ -322,19 +311,20 @@ class HotPostScraper:
         shares = 0
 
         # ── Thời gian ────────────────────────────────────────────────────────
-        # Thử data-utime (chính xác nhất)
-        try:
-            utime_el = dialog.locator("abbr[data-utime]").first
-            if utime_el.count() > 0:
-                utime = utime_el.get_attribute("data-utime")
-                time_raw = utime  # sẽ parse bên dưới
-                if utime:
-                    from datetime import datetime
-                    import pytz
-                    dt = datetime.fromtimestamp(int(utime), tz=pytz.UTC)
-                    posted_at = dt
-        except Exception:
-            pass
+        if not posted_at:
+            # Thử data-utime (chính xác nhất)
+            try:
+                utime_el = dialog.locator("abbr[data-utime]").first
+                if utime_el.count() > 0:
+                    utime = utime_el.get_attribute("data-utime")
+                    time_raw = utime  # sẽ parse bên dưới
+                    if utime:
+                        from datetime import datetime
+                        import pytz
+                        dt = datetime.fromtimestamp(int(utime), tz=pytz.UTC)
+                        posted_at = dt
+            except Exception:
+                pass
 
         # Fallback: tìm text dạng "15 giờ ·" gần tên trang
         if not posted_at:
@@ -492,7 +482,9 @@ class HotPostScraper:
                 pass
 
         if not posted_at:
-            return None
+            from django.utils import timezone
+            posted_at = timezone.now()
+            time_raw = "Unknown (Fallback to now)"
 
         return {
             'posted_at': posted_at,
@@ -568,7 +560,7 @@ class HotPostScraper:
                 total = len(post_links)
 
                 # ── BƯỚC 2: Click từng link → parse popup ─────────────────────
-                for idx, post_url in enumerate(post_links):
+                for idx, (post_url, posted_at) in enumerate(post_links):
                     if progress_callback:
                         pct = 50 + int((idx / max(total, 1)) * 48)
                         progress_callback(pct)
@@ -579,7 +571,7 @@ class HotPostScraper:
                         page.goto(post_url, wait_until='domcontentloaded', timeout=20_000)
                         time.sleep(3)
 
-                        post_data = self._parse_popup(page)
+                        post_data = self._parse_popup(page, known_posted_at=posted_at)
                         if not post_data:
                             logger.warning(f"Could not parse popup for {post_url}")
                             continue
