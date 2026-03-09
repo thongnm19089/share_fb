@@ -27,6 +27,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# Cho phép POST requests từ mọi IP/domain (bao gồm truy cập qua IP server)
+CSRF_TRUSTED_ORIGINS = ['http://*', 'https://*']
+
 
 # Application definition
 
