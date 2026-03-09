@@ -28,13 +28,14 @@ def scrape_page_background_task(page_id, user_id):
         account_cookies = account.cookies
         scraper = HotPostScraper(headless=True)
         
-        # Stop on existing entries ONLY if they are older than 30 hours
-        # so we STILL SCRAPE and UPDATE points for posts younger than 30 hours.
+        # Stop on existing entries ONLY if they are older than 24 hours (1 day)
+        # so we STILL SCRAPE and UPDATE points for posts younger than 24 hours.
         from datetime import timedelta
-        thirty_hours_ago = timezone.now() - timedelta(hours=30)
-        existing_urls = list(HotPost.objects.filter(page=page, posted_at__lt=thirty_hours_ago).order_by('-posted_at').values_list('post_url', flat=True)[:100])
+        twenty_four_hours_ago = timezone.now() - timedelta(hours=24)
+        existing_urls = list(HotPost.objects.filter(page=page, posted_at__lt=twenty_four_hours_ago).order_by('-posted_at').values_list('post_url', flat=True)[:100])
         
-        results = scraper.scrape_page(account_cookies, page.url, stop_urls=existing_urls, max_days=5, max_posts=50)
+        # We only need to check the last 1.5 days (approx 36 hours) of posts on the feed to get recent engagements
+        results = scraper.scrape_page(account_cookies, page.url, stop_urls=existing_urls, max_days=1.5, max_posts=50)
         
         # Save results using update_or_create to preserve history
         for p in results:
