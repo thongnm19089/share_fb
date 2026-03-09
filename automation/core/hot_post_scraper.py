@@ -601,7 +601,26 @@ class HotPostScraper:
                     try:
                         # Điều hướng đến link bài viết
                         page.goto(post_url, wait_until='domcontentloaded', timeout=20_000)
-                        time.sleep(1.5)  # Giảm từ 3s xuống 1.5s
+                        time.sleep(1.5)
+
+                        # ── Phát hiện trang lỗi của Facebook ─────────────────
+                        # Nếu Facebook trả về trang "Đã xảy ra lỗi" → bỏ qua
+                        ERROR_INDICATORS = [
+                            "đã xảy ra lỗi",
+                            "something went wrong",
+                            "rất tiếc",
+                            "this content isn't available",
+                            "nội dung này không khả dụng",
+                            "page not found",
+                        ]
+                        try:
+                            page_text_sample = page.locator('body').inner_text(timeout=3000)[:500].lower()
+                            if any(err in page_text_sample for err in ERROR_INDICATORS):
+                                logger.warning(f"Facebook error page detected for {post_url}, skipping.")
+                                continue
+                        except Exception:
+                            pass
+                        # ──────────────────────────────────────────────────────
 
                         post_data = self._parse_popup(page, known_posted_at=posted_at)
                         if not post_data:
