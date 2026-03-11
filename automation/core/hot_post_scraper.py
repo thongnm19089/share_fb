@@ -504,9 +504,7 @@ class HotPostScraper:
         }
 
     # ──────────────────────────────────────────────────────────────────────────
-    # MAIN: scrape_page
-    # ──────────────────────────────────────────────────────────────────────────
-    def scrape_page(self, account_cookies, page_url, progress_callback=None, stop_urls=None, max_days=5, max_posts=50):
+    def scrape_page(self, account_cookies, page_url, progress_callback=None, stop_urls=None, max_days=5, max_posts=50, timeout_seconds=600):
         """
         Luồng:
           1. Load trang, cuộn để lấy hết link bài viết trong max_days ngày gần đây
@@ -514,6 +512,7 @@ class HotPostScraper:
           3. Trả về list[dict] đã sort theo tương tác (likes + comments + shares)
         """
         results = []
+        start_time = time.time()
 
         with sync_playwright() as p:
             # Sửa đổi: Sử dụng Chrome của máy và thư mục Profile cố định để tránh bị Facebook chặn (Không dùng ẩn danh)
@@ -569,6 +568,11 @@ class HotPostScraper:
 
                 # ── BƯỚC 2: Click từng link → parse popup ─────────────────────
                 for idx, post_url in enumerate(post_links):
+                    # Timeout check
+                    if time.time() - start_time > timeout_seconds:
+                        logger.warning(f"Timeout of {timeout_seconds}s reached for page {page_url}. Breaking early with {len(results)} posts processed.")
+                        break
+
                     if progress_callback:
                         pct = 50 + int((idx / max(total, 1)) * 48)
                         progress_callback(pct)

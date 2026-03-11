@@ -40,11 +40,15 @@ def scrape_page_background_task(page_id, user_id):
         for p in results:
             try:
                 # Update by post_url instead of page + post_url to enforce global URL uniqueness
+                caption = p.get('caption', '').strip()
+                if not caption:
+                    caption = None # Use None so that empty crops won't violate UniqueConstraint
+                
                 HotPost.objects.update_or_create(
                     post_url=p['post_url'],
                     defaults={
                         'page': page,
-                        'content_snippet': p.get('caption', ''),
+                        'content_snippet': caption,
                         'posted_at': p['posted_at'],
                         'likes_count': p['likes'],
                         'comments_count': p['comments'],
@@ -52,7 +56,8 @@ def scrape_page_background_task(page_id, user_id):
                     }
                 )
             except Exception as e:
-                logger.error(f"Error saving hotpost to DB: {e}")
+                # Catch IntegrityError for unique constraints or other DB errors
+                logger.error(f"Error saving hotpost (possibly duplicate) to DB: {e}")
 
         page.scrape_status = 'completed'
         page.last_scraped_at = timezone.now()

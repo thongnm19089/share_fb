@@ -18,6 +18,10 @@
                 <option value="engagement">Tương tác Cao nhất</option>
                 <option value="time" selected>Bài mới nhất</option>
             </select>
+            <div class="input-group input-group-sm" style="width: 200px;">
+                <input type="text" id="search-input" class="form-control" placeholder="Tìm tên Stt...">
+                <button class="btn btn-outline-secondary" type="button" id="btn-search"><i class="fas fa-search"></i></button>
+            </div>
         </div>
         <div class="d-flex gap-2">
             <button id="btn-scrape-all" class="btn btn-success btn-sm"><i class="fas fa-robot"></i> <span
@@ -318,15 +322,34 @@
     const btnLoadMore = document.getElementById('btn-load-more');
 
     let currentSort = 'time';
+    let currentSearch = '';
     const sortSelect = document.getElementById('sort-select');
+    const searchInput = document.getElementById('search-input');
+    const btnSearch = document.getElementById('btn-search');
 
-    sortSelect.addEventListener('change', function () {
-        currentSort = this.value;
+    function triggerReload() {
         currentPage = 1;
         hasMore = true;
         lastRenderedDate = null;
         postsContainer.innerHTML = ''; // Reset ui
         loadHistoryPosts();
+    }
+
+    sortSelect.addEventListener('change', function () {
+        currentSort = this.value;
+        triggerReload();
+    });
+
+    btnSearch.addEventListener('click', function () {
+        currentSearch = searchInput.value.trim();
+        triggerReload();
+    });
+
+    searchInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            currentSearch = searchInput.value.trim();
+            triggerReload();
+        }
     });
 
     function loadHistoryPosts() {
@@ -335,7 +358,7 @@
         btnLoadMore.classList.remove('d-none');
         btnLoadMore.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang tải...';
 
-        fetch(`/api/posts/?page=${currentPage}&sort=${currentSort}`)
+        fetch(`/api/posts/?page=${currentPage}&sort=${currentSort}&q=${encodeURIComponent(currentSearch)}`)
             .then(res => res.json())
             .then(data => {
                 isLoading = false;
@@ -394,6 +417,5 @@
     });
 
     loadHistoryPosts();
-    });
 </script>
 {% endblock %}

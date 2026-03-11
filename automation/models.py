@@ -85,7 +85,8 @@ class HotPost(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['post_url'], name='unique_post_url')
+            models.UniqueConstraint(fields=['post_url'], name='unique_post_url'),
+            models.UniqueConstraint(fields=['page', 'content_snippet'], name='unique_page_content_snippet')
         ]
 
     def save(self, *args, **kwargs):

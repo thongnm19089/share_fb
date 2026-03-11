@@ -292,11 +292,15 @@ def api_get_posts(request):
         page = 1
     
     sort_by = request.GET.get('sort', 'engagement')
+    search_query = request.GET.get('q', '').strip()
     
     limit = 12
     offset = (page - 1) * limit
     
     posts_qs = HotPost.objects.filter(page__user=request.user)
+    
+    if search_query:
+        posts_qs = posts_qs.filter(content_snippet__icontains=search_query)
     
     # Annotate with post_date for grouping
     posts_qs = posts_qs.annotate(
