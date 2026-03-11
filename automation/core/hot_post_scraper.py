@@ -151,7 +151,7 @@ class HotPostScraper:
     # ──────────────────────────────────────────────────────────────────────────
     # STEP 1: Collect post links from the page feed
     # ──────────────────────────────────────────────────────────────────────────
-    def _collect_post_links(self, page, progress_callback=None, stop_urls=None, max_days=5, max_posts=50):
+    def _collect_post_links(self, page, progress_callback=None, stop_urls=None, max_days=5, max_posts=50, timeout_seconds=600, start_time=None):
         """
         Scroll qua feed, thu thập các link bài viết POST trong max_days ngày gần đây.
         Trả về list[str] – danh sách URL bài viết không trùng (tối đa max_posts).
@@ -248,6 +248,10 @@ class HotPostScraper:
             return new_found, should_stop
 
         for i in range(MAX_SCROLLS):
+            if start_time and time.time() - start_time > timeout_seconds:
+                logger.warning(f"Timeout of {timeout_seconds}s reached during post link collection. Breaking early.")
+                break
+
             page.mouse.wheel(0, SCROLL_STEP)
             time.sleep(SCROLL_PAUSE)
 
@@ -558,7 +562,10 @@ class HotPostScraper:
                     pass
 
                 # ── BƯỚC 1: Thu thập link ─────────────────────────────────────
-                post_links = self._collect_post_links(page, progress_callback, stop_urls, max_days=max_days, max_posts=max_posts)
+                post_links = self._collect_post_links(
+                    page, progress_callback, stop_urls, max_days=max_days, max_posts=max_posts,
+                    timeout_seconds=timeout_seconds, start_time=start_time
+                )
                 logger.info(f"Found {len(post_links)} post links to process (max_days={max_days}, max_posts={max_posts}).")
 
                 if progress_callback:
